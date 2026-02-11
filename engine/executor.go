@@ -1511,6 +1511,14 @@ func (ex *Executor) scanCollectionRaw(collName string, where parser.Expr) ([]*sc
 					continue
 				}
 			}
+			// Décompresser si le record est compressé (snappy)
+			if slot.Compressed && !slot.Overflow {
+				var err2 error
+				data, err2 = storage.DecompressRecord(&slot)
+				if err2 != nil {
+					continue
+				}
+			}
 			doc, err := storage.Decode(data)
 			if err != nil {
 				continue // skip corrupted records
@@ -1577,6 +1585,14 @@ func (ex *Executor) scanByIDsRaw(collName string, ids []uint64, where parser.Exp
 				totalLen, firstPage := slot.OverflowInfo()
 				var err2 error
 				data, err2 = ex.pager.ReadOverflowData(totalLen, firstPage)
+				if err2 != nil {
+					continue
+				}
+			}
+			// Décompresser si le record est compressé (snappy)
+			if slot.Compressed && !slot.Overflow {
+				var err2 error
+				data, err2 = storage.DecompressRecord(&slot)
 				if err2 != nil {
 					continue
 				}

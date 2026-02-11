@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"sync"
+
+	"github.com/klauspost/compress/snappy"
 )
 
 // MetaPage layout (page 0) :
@@ -679,8 +681,11 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// Compresser avec snappy si ça réduit la taille
+	storeData, storeFlag := p.compressRecord(data)
+
 	// Gros document → overflow pages
-	if len(data) > maxInlineRecordSize {
+	if len(storeData) > maxInlineRecordSize {
 		return p.insertOverflowRecord(coll, recordID, data)
 	}
 
@@ -692,7 +697,7 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 		if err != nil {
 			return err
 		}
-		if page.AppendRecord(recordID, data) {
+		if page.AppendRecordWithFlag(recordID, storeData, storeFlag) {
 			return p.writePageUnlocked(page)
 		}
 		lastPageID = pageID
@@ -718,7 +723,7 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 	if err != nil {
 		return err
 	}
-	if !newPage.AppendRecord(recordID, data) {
+	if !newPage.AppendRecordWithFlag(recordID, storeData, storeFlag) {
 		return fmt.Errorf("pager: record too large for a single page")
 	}
 	return p.writePageUnlocked(newPage)
@@ -1133,10 +1138,19 @@ func (p *Pager) VacuumCollection(collName string) (int, error) {
 					data     []byte
 				}{slot.RecordID, fullData})
 			} else {
+				recData := slot.Data
+				// Décompresser si le record est compressé
+				if slot.Compressed {
+					dec, err := snappy.Decode(nil, slot.Data)
+					if err != nil {
+						return 0, fmt.Errorf("vacuum: snappy decode: %w", err)
+					}
+					recData = dec
+				}
 				liveRecords = append(liveRecords, struct {
 					recordID uint64
 					data     []byte
-				}{slot.RecordID, slot.Data})
+				}{slot.RecordID, recData})
 			}
 		}
 		pageID = page.NextPageID()
@@ -1177,11 +1191,14 @@ func (p *Pager) VacuumCollection(collName string) (int, error) {
 			continue
 		}
 
+		// Compresser avant réécriture
+		storeData, storeFlag := p.compressRecord(rec.data)
+
 		page, err := p.readPageUnlocked(currentPageID)
 		if err != nil {
 			return 0, err
 		}
-		if !page.AppendRecord(rec.recordID, rec.data) {
+		if !page.AppendRecordWithFlag(rec.recordID, storeData, storeFlag) {
 			// Page pleine, allouer une nouvelle
 			nextID, err := p.allocatePageUnlocked(PageTypeData)
 			if err != nil {
@@ -1196,7 +1213,7 @@ func (p *Pager) VacuumCollection(collName string) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			newPage.AppendRecord(rec.recordID, rec.data)
+			newPage.AppendRecordWithFlag(rec.recordID, storeData, storeFlag)
 			if err := p.writePageUnlocked(newPage); err != nil {
 				return 0, err
 			}
@@ -1224,4 +1241,30 @@ func (p *Pager) WALPath() string {
 		return ""
 	}
 	return p.wal.path
+}
+
+// ---------- Snappy Compression ----------
+
+// compressRecord compresse les données avec snappy.
+// Retourne les données à stocker et le flag approprié.
+// Si la compression n'apporte pas de gain, retourne les données originales avec SlotFlagActive.
+func (p *Pager) compressRecord(data []byte) ([]byte, byte) {
+	compressed := snappy.Encode(nil, data)
+	if len(compressed) < len(data) {
+		return compressed, SlotFlagCompressed
+	}
+	return data, SlotFlagActive
+}
+
+// DecompressRecord décompresse les données d'un record si nécessaire.
+// Si le slot n'est pas compressé, retourne les données telles quelles.
+func DecompressRecord(slot *RecordSlot) ([]byte, error) {
+	if !slot.Compressed {
+		return slot.Data, nil
+	}
+	decoded, err := snappy.Decode(nil, slot.Data)
+	if err != nil {
+		return nil, fmt.Errorf("snappy decode: %w", err)
+	}
+	return decoded, nil
 }

@@ -91,10 +91,12 @@ func (p *Page) FreeSpace() int {
 
 // Constantes pour les flags de slot.
 const (
-	SlotFlagActive   byte = 0x00 // record actif, données dans la page
-	SlotFlagDeleted  byte = 0x01 // record supprimé
-	SlotFlagOverflow byte = 0x02 // record actif, données dans des overflow pages
-	SlotFlagDelOver  byte = 0x03 // record supprimé qui avait des overflow pages
+	SlotFlagActive       byte = 0x00 // record actif, données dans la page
+	SlotFlagDeleted      byte = 0x01 // record supprimé
+	SlotFlagOverflow     byte = 0x02 // record actif, données dans des overflow pages
+	SlotFlagDelOver      byte = 0x03 // record supprimé qui avait des overflow pages
+	SlotFlagCompressed   byte = 0x04 // record actif, données compressées (snappy)
+	SlotFlagCompOverflow byte = 0x06 // record actif, overflow + compressé
 )
 
 // OverflowSlotSize est la taille d'un slot d'overflow pointer dans une data page.
@@ -110,6 +112,11 @@ const OverflowDataCapacity = PageSize - PageHeaderSize // = 4080 bytes
 const RecordSlotHeaderSize = 8 + 2 + 1 // record_id + data_len + flags
 
 func (p *Page) AppendRecord(recordID uint64, data []byte) bool {
+	return p.AppendRecordWithFlag(recordID, data, SlotFlagActive)
+}
+
+// AppendRecordWithFlag ajoute un record avec un flag personnalisé (ex: SlotFlagCompressed).
+func (p *Page) AppendRecordWithFlag(recordID uint64, data []byte, flag byte) bool {
 	needed := RecordSlotHeaderSize + len(data)
 	if p.FreeSpace() < needed {
 		return false
@@ -117,7 +124,7 @@ func (p *Page) AppendRecord(recordID uint64, data []byte) bool {
 	off := p.FreeSpaceOffset()
 	binary.LittleEndian.PutUint64(p.Data[off:], recordID)
 	binary.LittleEndian.PutUint16(p.Data[off+8:], uint16(len(data)))
-	p.Data[off+10] = SlotFlagActive
+	p.Data[off+10] = flag
 	copy(p.Data[off+11:], data)
 
 	p.SetFreeSpaceOffset(off + uint16(needed))
@@ -160,11 +167,12 @@ func (p *Page) ReadOverflowData(length int) []byte {
 
 // RecordSlot représente un record lu depuis une page.
 type RecordSlot struct {
-	RecordID uint64
-	Data     []byte
-	Deleted  bool
-	Overflow bool   // true si les données sont dans des overflow pages
-	Offset   uint16 // offset dans la page (pour mise à jour)
+	RecordID   uint64
+	Data       []byte
+	Deleted    bool
+	Overflow   bool   // true si les données sont dans des overflow pages
+	Compressed bool   // true si les données sont compressées (snappy)
+	Offset     uint16 // offset dans la page (pour mise à jour)
 }
 
 // OverflowInfo extrait totalLen et firstOverflowPageID d'un slot overflow.
@@ -200,11 +208,12 @@ func (p *Page) ReadRecords() []RecordSlot {
 		copy(dataCopy, p.Data[dataStart:dataStart+dlen])
 
 		slots = append(slots, RecordSlot{
-			RecordID: rid,
-			Data:     dataCopy,
-			Deleted:  flags == SlotFlagDeleted || flags == SlotFlagDelOver,
-			Overflow: flags == SlotFlagOverflow,
-			Offset:   off,
+			RecordID:   rid,
+			Data:       dataCopy,
+			Deleted:    flags == SlotFlagDeleted || flags == SlotFlagDelOver,
+			Overflow:   flags == SlotFlagOverflow || flags == SlotFlagCompOverflow,
+			Compressed: flags == SlotFlagCompressed || flags == SlotFlagCompOverflow,
+			Offset:     off,
 		})
 		off = dataStart + dlen
 	}
@@ -214,7 +223,8 @@ func (p *Page) ReadRecords() []RecordSlot {
 // MarkDeleted marque un record comme supprimé à l'offset donné.
 // Préserve le flag overflow pour permettre la libération des overflow pages.
 func (p *Page) MarkDeleted(slotOffset uint16) {
-	if p.Data[slotOffset+10] == SlotFlagOverflow {
+	flag := p.Data[slotOffset+10]
+	if flag == SlotFlagOverflow || flag == SlotFlagCompOverflow {
 		p.Data[slotOffset+10] = SlotFlagDelOver
 	} else {
 		p.Data[slotOffset+10] = SlotFlagDeleted
