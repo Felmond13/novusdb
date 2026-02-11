@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 140" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(103, 0)">
+    <!-- Icon background -->
+    <rect x="10" y="10" width="120" height="120" rx="28" fill="#12121a"/>
+    <rect x="10" y="10" width="120" height="120" rx="28" stroke="url(#g2)" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <!-- Document shape -->
+    <path d="M42 30 L82 30 L100 48 L100 108 L42 108 Z" fill="url(#g1)" opacity="0.15" stroke="url(#g1)" stroke-width="1.5"/>
+    <path d="M82 30 L82 48 L100 48" fill="none" stroke="url(#g1)" stroke-width="1.5"/>
+    <!-- Data lines -->
+    <rect x="52" y="58" width="36" height="3" rx="1.5" fill="#818cf8" opacity="0.9"/>
+    <rect x="52" y="67" width="27" height="3" rx="1.5" fill="#06b6d4" opacity="0.7"/>
+    <rect x="52" y="76" width="32" height="3" rx="1.5" fill="#818cf8" opacity="0.5"/>
+    <rect x="52" y="85" width="22" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
+    <!-- Diamond -->
+    <path d="M68 34 L74 42 L68 50 L62 42 Z" fill="url(#g2)"/>
+    <!-- Text: DocLite -->
+    <text x="155" y="85" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="#e4e4ef">Doc<tspan fill="url(#g2)">Lite</tspan></text>
+  </g>
+</svg>

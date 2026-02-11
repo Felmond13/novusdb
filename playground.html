@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-STZ5VWVC4X"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-STZ5VWVC4X');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovusDB Playground — Try it live in your browser</title>
+  <meta name="description" content="Try NovusDB directly in your browser. No install, no signup. Full SQL on JSON documents, powered by WebAssembly.">
+  <link rel="canonical" href="https://novusdb.dev/playground">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://novusdb.dev/playground">
+  <meta property="og:title" content="NovusDB Playground — Try it live">
+  <meta property="og:description" content="Full SQL on JSON documents, running entirely in your browser. No install, no signup.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- xterm.js -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-card: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --text-muted: #8888a0;
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --accent: #06b6d4;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---- Header ---- */
+    .pg-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      flex-shrink: 0;
+    }
+
+    .pg-header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .pg-logo {
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+
+    .pg-logo span { color: var(--accent); }
+
+    .pg-badge {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .pg-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pg-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .2s;
+      text-decoration: none;
+      font-family: var(--font);
+    }
+
+    .pg-btn:hover {
+      border-color: var(--primary);
+      color: var(--text);
+      background: rgba(99, 102, 241, 0.08);
+    }
+
+    .pg-btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .pg-btn-primary:hover {
+      background: #4f46e5;
+    }
+
+    /* ---- Main Layout ---- */
+    .pg-main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ---- Sidebar ---- */
+    .pg-sidebar {
+      width: 280px;
+      border-right: 1px solid var(--border);
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .pg-sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pg-sidebar-title {
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+    }
+
+    .pg-example {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: .75rem;
+      cursor: pointer;
+      text-align: left;
+      transition: background .15s;
+    }
+
+    .pg-example:hover {
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .pg-example-label {
+      font-family: var(--font);
+      font-size: .7rem;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .pg-example .sql-kw  { color: #818cf8; }
+    .pg-example .sql-fn  { color: #06b6d4; }
+    .pg-example .sql-str { color: #10b981; }
+    .pg-example .sql-num { color: #f59e0b; }
+    .pg-example .sql-op  { color: #06b6d4; }
+    .pg-example .sql-dot { color: #8888a0; }
+
+    /* ---- Terminal Area ---- */
+    .pg-terminal-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .pg-terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(18, 18, 26, 0.6);
+      flex-shrink: 0;
+    }
+
+    .pg-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .pg-dot-red { background: #ff5f57; }
+    .pg-dot-yellow { background: #febc2e; }
+    .pg-dot-green { background: #28c840; }
+
+    .pg-terminal-title {
+      font-family: var(--mono);
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    #terminal {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ---- Loading Overlay ---- */
+    .pg-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      z-index: 100;
+      gap: 16px;
+      transition: opacity .4s;
+    }
+
+    .pg-loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .pg-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pg-loading-text {
+      font-family: var(--mono);
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+
+    .pg-loading-sub {
+      font-size: .75rem;
+      color: var(--text-muted);
+      opacity: .6;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .pg-sidebar { display: none; }
+    }
+
+    /* xterm overrides */
+    .xterm { height: 100%; }
+    .xterm-viewport::-webkit-scrollbar { width: 6px; }
+    .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+    .xterm-viewport::-webkit-scrollbar-thumb { background: #2e2e4e; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="pg-header">
+    <div class="pg-header-left">
+      <a href="/" class="pg-logo"><img src="logo.svg" alt="NovusDB" width="28" height="28" style="vertical-align:middle;margin-right:6px;">Doc<span>Lite</span></a>
+      <span class="pg-badge">Playground</span>
+    </div>
+    <div class="pg-header-right">
+      <a href="docs.html" class="pg-btn">Docs</a>
+      <a href="/" class="pg-btn">← Back to site</a>
+      <a href="https://github.com/Felmond13/novusdb" target="_blank" class="pg-btn">GitHub</a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="pg-main">
+    <!-- Sidebar -->
+    <aside class="pg-sidebar">
+      <div class="pg-sidebar-section">
+        <div class="pg-sidebar-title">Quick Start</div>
+        <button class="pg-example" data-query="INSERT INTO users VALUES (name=&quot;Alice&quot;, age=30, role=&quot;admin&quot;);">
+          <span class="pg-example-label">Insert a document</span>
+          INSERT INTO users VALUES (name="Alice", age=30, role="admin");
+        </button>
+        <button class="pg-example" data-query='INSERT INTO users VALUES {"name": "Bob", "age": 25, "role": "dev", "skills": ["Go", "SQL"]};'>
+          <span class="pg-example-label">Insert JSON</span>
+          INSERT INTO users VALUES {"name":"Bob"...};
+        </button>
+        <button class="pg-example" data-query="SELECT * FROM users;">
+          <span class="pg-example-label">Select all</span>
+          SELECT * FROM users;
+        </button>
+      </div>
+
+      <div class="pg-sidebar-section">
+        <div class="pg-sidebar-title">Nested JSON</div>
+        <button class="pg-example" data-query='INSERT INTO products VALUES {"name": "Laptop", "price": 999.99, "specs": {"cpu": "i7", "ram": 16, "storage": "512GB SSD"}, "tags": ["electronics", "computer"]};'>
+          <span class="pg-example-label">Nested object insert</span>
+          INSERT nested JSON document
+        </button>
+        <button class="pg-example" data-query="SELECT name, specs.cpu, specs.ram FROM products;">
+          <span class="pg-example-label">Dot-notation query</span>
+          SELECT name, specs.cpu, specs.ram FROM products;
+        </button>
+      </div>
+
+      <div class="pg-sidebar-section">
+        <div class="pg-sidebar-title">Advanced SQL</div>
+        <button class="pg-example" data-query="SELECT role, COUNT(*) as total FROM users GROUP BY role;">
+          <span class="pg-example-label">GROUP BY</span>
+          SELECT role, COUNT(*) ... GROUP BY role;
+        </button>
+        <button class="pg-example" data-query="SELECT * FROM users WHERE age > (SELECT AVG(age) FROM users);">
+          <span class="pg-example-label">Subquery</span>
+          WHERE age > (SELECT AVG(age)...);
+        </button>
+        <button class="pg-example" data-query="SELECT name, CASE WHEN age >= 30 THEN 'senior' ELSE 'junior' END as level FROM users;">
+          <span class="pg-example-label">CASE WHEN</span>
+          CASE WHEN age >= 30 THEN...
+        </button>
+        <button class="pg-example" data-query="CREATE INDEX ON users (age);">
+          <span class="pg-example-label">Create index</span>
+          CREATE INDEX ON users (age);
+        </button>
+        <button class="pg-example" data-query="EXPLAIN SELECT * FROM users WHERE age > 25;">
+          <span class="pg-example-label">Explain query</span>
+          EXPLAIN SELECT ... WHERE age > 25;
+        </button>
+      </div>
+
+      <div class="pg-sidebar-section">
+        <div class="pg-sidebar-title">Commands</div>
+        <button class="pg-example" data-query=".tables">
+          <span class="pg-example-label">List collections</span>
+          .tables
+        </button>
+        <button class="pg-example" data-query=".schema">
+          <span class="pg-example-label">Show schema</span>
+          .schema
+        </button>
+        <button class="pg-example" data-query=".indexes">
+          <span class="pg-example-label">List indexes</span>
+          .indexes
+        </button>
+        <button class="pg-example" data-query=".help">
+          <span class="pg-example-label">Show help</span>
+          .help
+        </button>
+      </div>
+    </aside>
+
+    <!-- Terminal -->
+    <div class="pg-terminal-wrap" style="position:relative;">
+      <div class="pg-terminal-bar">
+        <span class="pg-dot pg-dot-red"></span>
+        <span class="pg-dot pg-dot-yellow"></span>
+        <span class="pg-dot pg-dot-green"></span>
+        <span class="pg-terminal-title">NovusDB — in-memory</span>
+      </div>
+      <div id="terminal"></div>
+
+      <!-- Loading overlay -->
+      <div class="pg-loading" id="loading">
+        <div class="pg-spinner"></div>
+        <div class="pg-loading-text">Loading NovusDB engine...</div>
+        <div class="pg-loading-sub">Initializing...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WASM -->
+  <script src="wasm_exec.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ---- xterm.js setup ----
+    const term = new Terminal({
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      fontSize: 14,
+      lineHeight: 1.4,
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      theme: {
+        background: '#0a0a0f',
+        foreground: '#e4e4ef',
+        cursor: '#818cf8',
+        cursorAccent: '#0a0a0f',
+        selectionBackground: 'rgba(99, 102, 241, 0.3)',
+        black: '#0a0a0f',
+        red: '#ef4444',
+        green: '#10b981',
+        yellow: '#f59e0b',
+        blue: '#6366f1',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#e4e4ef',
+        brightBlack: '#5c5c78',
+        brightRed: '#f87171',
+        brightGreen: '#34d399',
+        brightYellow: '#fbbf24',
+        brightBlue: '#818cf8',
+        brightMagenta: '#c084fc',
+        brightCyan: '#22d3ee',
+        brightWhite: '#ffffff',
+      }
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinksAddon);
+    const termEl = document.getElementById('terminal');
+    term.open(termEl);
+    // Ensure proper sizing: fit after layout is stable
+    fitAddon.fit();
+    requestAnimationFrame(() => fitAddon.fit());
+    setTimeout(() => fitAddon.fit(), 200);
+    window.addEventListener('resize', () => fitAddon.fit());
+    new ResizeObserver(() => fitAddon.fit()).observe(termEl);
+    // Explicitly enable wraparound mode
+    term.write('\x1b[?7h');
+
+    // ---- State ----
+    let currentLine = '';
+    let cursorPos = 0;
+    let history = [];
+    let historyIndex = -1;
+    let wasmReady = false;
+    let accumulator = '';
+
+    // ---- Syntax highlighting ----
+    const C_RESET = '\x1b[0m';
+    const C_KW    = '\x1b[38;2;129;140;248m';  // indigo — keywords
+    const C_FN    = '\x1b[38;2;6;182;212m';     // cyan — functions
+    const C_STR   = '\x1b[38;2;16;185;129m';    // green — strings
+    const C_NUM   = '\x1b[38;2;245;158;11m';    // yellow — numbers
+    const C_OP    = '\x1b[38;2;6;182;212m';     // cyan — operators
+    const C_DOT   = '\x1b[38;2;136;136;160m';   // muted — dot commands
+    const C_CMT   = '\x1b[38;2;92;92;120m';     // dim — comments
+
+    const SQL_KW = new Set([
+      'select','from','where','and','or','not','in','is','null','like',
+      'between','exists','as','on','join','inner','left','right','cross',
+      'insert','into','values','update','set','delete','drop','create',
+      'index','table','view','if','then','else','end','case','when',
+      'order','by','group','having','limit','offset','distinct',
+      'union','all','asc','desc','explain','truncate','begin','commit',
+      'rollback','true','false','replace',
+      'sequence','nextval','currval','start','with','increment','cycle','nocycle',
+      'minvalue','maxvalue',
+      'sysdate','current_date','current_timestamp','now'
+    ]);
+    const SQL_FN = new Set([
+      'count','sum','avg','min','max','coalesce','length','upper','lower','abs',
+      'substr','trim','round','typeof','ifnull','nullif','random','hex',
+      'nextval','currval'
+    ]);
+
+    function colorize(line) {
+      if (line.startsWith('.')) return C_DOT + line + C_RESET;
+      if (line.trimStart().startsWith('--')) return C_CMT + line + C_RESET;
+
+      let out = '';
+      let i = 0;
+      while (i < line.length) {
+        if (line[i] === '"' || line[i] === "'") {
+          const q = line[i];
+          let j = i + 1;
+          while (j < line.length && line[j] !== q) j++;
+          j = Math.min(j + 1, line.length);
+          out += C_STR + line.slice(i, j) + C_RESET;
+          i = j;
+        }
+        else if (/[0-9]/.test(line[i]) && (i === 0 || /[\s,=(><+\-*/]/.test(line[i-1]))) {
+          let j = i;
+          while (j < line.length && /[0-9.]/.test(line[j])) j++;
+          out += C_NUM + line.slice(i, j) + C_RESET;
+          i = j;
+        }
+        else if (/[a-zA-Z_]/.test(line[i])) {
+          let j = i;
+          while (j < line.length && /[a-zA-Z0-9_]/.test(line[j])) j++;
+          const word = line.slice(i, j);
+          const lower = word.toLowerCase();
+          if (SQL_KW.has(lower)) {
+            out += C_KW + word + C_RESET;
+          } else if (SQL_FN.has(lower)) {
+            out += C_FN + word + C_RESET;
+          } else {
+            out += word;
+          }
+          i = j;
+        }
+        else if ('>=<!'.includes(line[i])) {
+          let j = i;
+          while (j < line.length && '>=<!'.includes(line[j])) j++;
+          out += C_OP + line.slice(i, j) + C_RESET;
+          i = j;
+        }
+        else if ('{}[]()'.includes(line[i])) {
+          out += C_OP + line[i] + C_RESET;
+          i++;
+        }
+        else {
+          out += line[i];
+          i++;
+        }
+      }
+      return out;
+    }
+
+    // ---- Auto-format: uppercase SQL keywords ----
+    function autoUppercaseLastWord() {
+      const delimPos = cursorPos - 1;
+      if (delimPos < 1) return;
+      let wordEnd = delimPos;
+      let wordStart = wordEnd - 1;
+      while (wordStart >= 0 && /[a-zA-Z0-9_]/.test(currentLine[wordStart])) wordStart--;
+      wordStart++;
+      if (wordStart >= wordEnd) return;
+      const word = currentLine.slice(wordStart, wordEnd);
+      const lower = word.toLowerCase();
+      if (SQL_KW.has(lower) || SQL_FN.has(lower)) {
+        currentLine = currentLine.slice(0, wordStart) + word.toUpperCase() + currentLine.slice(wordEnd);
+      }
+    }
+
+    function autoFormatAll() {
+      let result = '';
+      let i = 0;
+      while (i < currentLine.length) {
+        if (currentLine[i] === '"' || currentLine[i] === "'") {
+          const q = currentLine[i];
+          let j = i + 1;
+          while (j < currentLine.length && currentLine[j] !== q) j++;
+          j = Math.min(j + 1, currentLine.length);
+          result += currentLine.slice(i, j);
+          i = j;
+        } else if (/[a-zA-Z_]/.test(currentLine[i])) {
+          let j = i;
+          while (j < currentLine.length && /[a-zA-Z0-9_]/.test(currentLine[j])) j++;
+          const word = currentLine.slice(i, j);
+          const lower = word.toLowerCase();
+          if (SQL_KW.has(lower) || SQL_FN.has(lower)) {
+            result += word.toUpperCase();
+          } else {
+            result += word;
+          }
+          i = j;
+        } else {
+          result += currentLine[i];
+          i++;
+        }
+      }
+      currentLine = result;
+    }
+
+    // ---- Cursor helpers (wrap-aware) ----
+    function getPromptLen() {
+      return accumulator ? 8 : 9; // "   ...> " = 8, "NovusDB> " = 9
+    }
+
+    function getTermPos(charPos) {
+      const abs = getPromptLen() + charPos;
+      return { row: Math.floor(abs / term.cols), col: abs % term.cols };
+    }
+
+    function moveCursorTo(fromCharPos, toCharPos) {
+      const from = getTermPos(fromCharPos);
+      const to = getTermPos(toCharPos);
+      if (to.row < from.row) term.write('\x1b[' + (from.row - to.row) + 'A');
+      else if (to.row > from.row) term.write('\x1b[' + (to.row - from.row) + 'B');
+      term.write('\r');
+      if (to.col > 0) term.write('\x1b[' + to.col + 'C');
+    }
+
+    function fullRedraw(oldCharPos) {
+      // Navigate from terminal cursor (at oldCharPos) to prompt origin
+      const oldTerm = getTermPos(oldCharPos);
+      if (oldTerm.row > 0) term.write('\x1b[' + oldTerm.row + 'A');
+      term.write('\r');
+      // Clear from prompt to end of screen (handles shrinking + multi-row)
+      term.write('\x1b[0J');
+      // Rewrite prompt + colored input
+      term.write(accumulator ? PROMPT_CONT : PROMPT);
+      term.write(colorize(currentLine));
+      // Move cursor from end-of-input to target cursorPos
+      if (cursorPos < currentLine.length) {
+        moveCursorTo(currentLine.length, cursorPos);
+      }
+    }
+
+    function setLine(text) {
+      const oldPos = cursorPos;
+      currentLine = text;
+      cursorPos = text.length;
+      fullRedraw(oldPos);
+    }
+
+    const PROMPT = '\x1b[38;5;105mNovusDB>\x1b[0m ';
+    const PROMPT_CONT = '\x1b[38;5;240m   ...>\x1b[0m ';
+
+    function writePrompt() {
+      term.write(accumulator ? PROMPT_CONT : PROMPT);
+    }
+
+    function writeLine(text) {
+      term.writeln(text);
+    }
+
+    function writeOutput(text) {
+      const lines = text.split('\n');
+      for (const line of lines) {
+        let colored = line;
+        if (line.startsWith('Erreur') || line.startsWith('error')) {
+          colored = '\x1b[31m' + line + '\x1b[0m';
+        } else if (line.startsWith('OK')) {
+          colored = '\x1b[32m' + line + '\x1b[0m';
+        } else if (line.startsWith('---')) {
+          colored = '\x1b[38;5;240m' + line + '\x1b[0m';
+        } else if (line.startsWith('[#')) {
+          colored = line.replace(/^\[#(\d+)\]/, '\x1b[38;5;105m[#$1]\x1b[0m');
+        } else if (line.startsWith('  ├─')) {
+          colored = '\x1b[38;5;240m' + line + '\x1b[0m';
+        }
+        writeLine('  ' + colored);
+      }
+    }
+
+    function handleInput(line) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        writePrompt();
+        return;
+      }
+
+      // Skip comments
+      if (trimmed.startsWith('--')) {
+        writePrompt();
+        return;
+      }
+
+      // Accumulate multi-line input
+      accumulator += (accumulator ? '\n' : '') + line;
+
+      // Check if statement is complete (ends with ; or is a dot-command)
+      const accTrimmed = accumulator.trim();
+      if (!accTrimmed.startsWith('.') && !accTrimmed.endsWith(';')) {
+        writePrompt();
+        return;
+      }
+
+      // Execute
+      const query = accumulator;
+      accumulator = '';
+
+      if (accTrimmed === '.clear') {
+        term.clear();
+        writePrompt();
+        return;
+      }
+
+      if (!wasmReady) {
+        writeOutput('Engine not ready yet. Please wait...');
+        writePrompt();
+        return;
+      }
+
+      try {
+        const result = window.NovusDBExec(query);
+        if (result) {
+          writeOutput(result);
+        }
+      } catch (e) {
+        writeOutput('Erreur : ' + e.message);
+      }
+
+      // Add to history
+      if (trimmed) {
+        history.push(query);
+        historyIndex = history.length;
+      }
+
+      writePrompt();
+    }
+
+    // ---- Key handling ----
+    term.onKey(function(e) {
+      const key = e.domEvent.key;
+      const ctrl = e.domEvent.ctrlKey;
+
+      if (key === 'Enter') {
+        // Auto-format all keywords before submit
+        autoFormatAll();
+        fullRedraw(cursorPos);
+        writeLine('');
+        handleInput(currentLine);
+        currentLine = '';
+        cursorPos = 0;
+      } else if (key === 'Backspace') {
+        if (cursorPos > 0) {
+          const oldPos = cursorPos;
+          currentLine = currentLine.slice(0, cursorPos - 1) + currentLine.slice(cursorPos);
+          cursorPos--;
+          fullRedraw(oldPos);
+        }
+      } else if (key === 'Delete') {
+        if (cursorPos < currentLine.length) {
+          const oldPos = cursorPos;
+          currentLine = currentLine.slice(0, cursorPos) + currentLine.slice(cursorPos + 1);
+          fullRedraw(oldPos);
+        }
+      } else if (key === 'ArrowLeft') {
+        if (cursorPos > 0) {
+          const oldPos = cursorPos;
+          cursorPos--;
+          moveCursorTo(oldPos, cursorPos);
+        }
+      } else if (key === 'ArrowRight') {
+        if (cursorPos < currentLine.length) {
+          const oldPos = cursorPos;
+          cursorPos++;
+          moveCursorTo(oldPos, cursorPos);
+        }
+      } else if (key === 'Home' || (ctrl && key === 'a')) {
+        if (cursorPos > 0) {
+          const oldPos = cursorPos;
+          cursorPos = 0;
+          moveCursorTo(oldPos, 0);
+        }
+      } else if (key === 'End' || (ctrl && key === 'e')) {
+        if (cursorPos < currentLine.length) {
+          const oldPos = cursorPos;
+          cursorPos = currentLine.length;
+          moveCursorTo(oldPos, cursorPos);
+        }
+      } else if (key === 'ArrowUp') {
+        if (history.length > 0 && historyIndex > 0) {
+          historyIndex--;
+          setLine(history[historyIndex]);
+        }
+      } else if (key === 'ArrowDown') {
+        if (historyIndex < history.length - 1) {
+          historyIndex++;
+          setLine(history[historyIndex]);
+        } else {
+          historyIndex = history.length;
+          setLine('');
+        }
+      } else if (ctrl && key === 'c') {
+        writeLine('^C');
+        currentLine = '';
+        cursorPos = 0;
+        accumulator = '';
+        writePrompt();
+      } else if (ctrl && key === 'l') {
+        term.clear();
+        writePrompt();
+        setLine(currentLine);
+      } else if (key === 'Tab') {
+        // Prevent default, insert 2 spaces
+        e.domEvent.preventDefault();
+        const oldPos = cursorPos;
+        currentLine = currentLine.slice(0, cursorPos) + '  ' + currentLine.slice(cursorPos);
+        cursorPos += 2;
+        fullRedraw(oldPos);
+      } else if (key.length === 1 && !ctrl) {
+        const oldPos = cursorPos;
+        currentLine = currentLine.slice(0, cursorPos) + key + currentLine.slice(cursorPos);
+        cursorPos++;
+        // Auto-uppercase keyword when delimiter is typed
+        if (/[\s,;()\[\]{}]/.test(key)) {
+          autoUppercaseLastWord();
+        }
+        fullRedraw(oldPos);
+      }
+    });
+
+    // Handle paste
+    term.onData(function(data) {
+      if (data.length > 1 && !data.startsWith('\x1b')) {
+        const clean = data.replace(/[\x00-\x1f]/g, '');
+        if (clean) {
+          const oldPos = cursorPos;
+          currentLine = currentLine.slice(0, cursorPos) + clean + currentLine.slice(cursorPos);
+          cursorPos += clean.length;
+          fullRedraw(oldPos);
+        }
+      }
+    });
+
+    // ---- Sidebar examples: colorize SQL in buttons ----
+    function colorizeHtml(text) {
+      if (text.startsWith('.')) return '<span class="sql-dot">' + text + '</span>';
+      let out = '';
+      let i = 0;
+      while (i < text.length) {
+        if (text[i] === '"' || text[i] === "'") {
+          const q = text[i];
+          let j = i + 1;
+          while (j < text.length && text[j] !== q) j++;
+          j = Math.min(j + 1, text.length);
+          out += '<span class="sql-str">' + text.slice(i, j) + '</span>';
+          i = j;
+        } else if (/[0-9]/.test(text[i]) && (i === 0 || /[\s,=(><+\-*/]/.test(text[i-1]))) {
+          let j = i;
+          while (j < text.length && /[0-9.]/.test(text[j])) j++;
+          out += '<span class="sql-num">' + text.slice(i, j) + '</span>';
+          i = j;
+        } else if (/[a-zA-Z_]/.test(text[i])) {
+          let j = i;
+          while (j < text.length && /[a-zA-Z0-9_*]/.test(text[j])) j++;
+          const word = text.slice(i, j);
+          const lower = word.toLowerCase();
+          if (SQL_KW.has(lower)) {
+            out += '<span class="sql-kw">' + word + '</span>';
+          } else if (SQL_FN.has(lower)) {
+            out += '<span class="sql-fn">' + word + '</span>';
+          } else {
+            out += word;
+          }
+          i = j;
+        } else if ('>=<!'.includes(text[i])) {
+          let j = i;
+          while (j < text.length && '>=<!'.includes(text[j])) j++;
+          out += '<span class="sql-op">' + text.slice(i, j) + '</span>';
+          i = j;
+        } else if ('{}[]()'.includes(text[i])) {
+          out += '<span class="sql-op">' + text[i] + '</span>';
+          i++;
+        } else {
+          out += text[i];
+          i++;
+        }
+      }
+      return out;
+    }
+
+    document.querySelectorAll('.pg-example').forEach(btn => {
+      btn.addEventListener('click', function() {
+        setLine(this.dataset.query);
+        term.focus();
+      });
+      // Colorize the SQL text in the button (skip the label span)
+      const label = btn.querySelector('.pg-example-label');
+      const rawText = btn.textContent.replace(label.textContent, '').trim();
+      // Rebuild button: label + colorized SQL
+      const labelHtml = label.outerHTML;
+      btn.innerHTML = labelHtml + colorizeHtml(rawText);
+    });
+
+    // ---- Banner ----
+    function showBanner() {
+      writeLine('\x1b[38;5;105m');
+      writeLine('  ╔══════════════════════════════════════════════════╗');
+      writeLine('  ║   \x1b[1mNovusDB\x1b[22m — Embedded Document Database          ║');
+      writeLine('  ║   Try it live — directly in your browser        ║');
+      writeLine('  ╚══════════════════════════════════════════════════╝');
+      writeLine('\x1b[0m');
+      writeLine('  \x1b[38;5;240mType \x1b[38;5;105m.help\x1b[38;5;240m for commands, or try the examples on the left.\x1b[0m');
+      writeLine('  \x1b[38;5;240mThis database lives entirely in memory — nothing is saved.\x1b[0m');
+      writeLine('');
+    }
+
+    // ---- Load WASM ----
+    async function loadWasm() {
+      const go = new Go();
+      try {
+        const result = await WebAssembly.instantiateStreaming(
+          fetch('novusdb.wasm'),
+          go.importObject
+        );
+        go.run(result.instance);
+      } catch (e) {
+        // Fallback for browsers that don't support instantiateStreaming
+        try {
+          const resp = await fetch('novusdb.wasm');
+          const bytes = await resp.arrayBuffer();
+          const result = await WebAssembly.instantiate(bytes, go.importObject);
+          go.run(result.instance);
+        } catch (e2) {
+          document.getElementById('loading').innerHTML =
+            '<div style="color:#ef4444;font-family:monospace;text-align:center;">' +
+            'Failed to load WebAssembly.<br>' + e2.message + '</div>';
+          return;
+        }
+      }
+    }
+
+    window.onNovusDBReady = function() {
+      wasmReady = true;
+      document.getElementById('loading').classList.add('hidden');
+      showBanner();
+      writePrompt();
+      term.focus();
+    };
+
+    loadWasm();
+  })();
+  </script>
+</body>
+</html>

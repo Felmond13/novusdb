@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-STZ5VWVC4X"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-STZ5VWVC4X');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovusDB — JSON flexibility. SQL power. One file is all you need.</title>
+  <meta name="description" content="NovusDB is an embedded document database. Store nested JSON documents, query them with full SQL — JOINs, aggregations, subqueries — all in a single file. No server, no schema, no setup.">
+  <meta name="keywords" content="NovusDB, embedded database, document database, JSON database, NoSQL, SQL, Go database, lightweight database, single file database, novusdb.dev">
+  <meta name="author" content="Noureddine BOUKADOUM">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://novusdb.dev">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://novusdb.dev">
+  <meta property="og:title" content="NovusDB — JSON flexibility. SQL power. One file is all you need.">
+  <meta property="og:description" content="Embedded document database. Store nested JSON, query with full SQL — JOINs, aggregations, subqueries. One file, zero setup, zero dependencies.">
+  <meta property="og:site_name" content="NovusDB">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NovusDB — JSON flexibility. SQL power. One file is all you need.">
+  <meta name="twitter:description" content="Embedded document database. Store nested JSON, query with full SQL — JOINs, aggregations, subqueries. One file, zero setup, zero dependencies.">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "NovusDB",
+    "url": "https://novusdb.dev",
+    "description": "Lightweight embedded document database. Store JSON, query with SQL, ship in one file.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free for personal use, education, and small businesses under $50K revenue"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Noureddine BOUKADOUM",
+      "email": "noureddine.boukadoum@gmail.com"
+    },
+    "programmingLanguage": "Go",
+    "codeRepository": "https://github.com/Felmond13/novusdb"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="logo">
+        <img src="logo.svg" alt="NovusDB" width="32" height="32" style="vertical-align:middle;margin-right:8px;">Doc<span style="color:#06b6d4;">Lite</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#code">Examples</a>
+        <a href="#drivers">Drivers</a>
+        <a href="docs.html">Docs</a>
+        <a href="#pricing">Pricing</a>
+        <a href="playground.html" class="btn btn-sm" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.25);">▶ Playground</a>
+        <a href="https://github.com/Felmond13/novusdb" target="_blank" class="btn btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container hero-inner">
+      <div class="badge">Free &middot; Open Source &middot; Ready in 5 seconds</div>
+      <h1>JSON flexibility. SQL power.<br>One file is all you need.</h1>
+      <p class="hero-sub">NovusDB is an embedded document database. Store nested JSON documents with dynamic fields,<br>query them with full SQL — JOINs, aggregations, subqueries, CASE WHEN. No server, no schema, no setup.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/Felmond13/novusdb" class="btn btn-primary btn-lg">
+          Try it free
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="playground.html" class="btn btn-outline btn-lg">▶ Try it Live</a>
+      </div>
+      <div class="hero-tech">
+        <span>JSON native</span><span>Full SQL</span><span>Nested fields</span><span>Single file</span><span>No schema</span><span>Zero dependencies</span>
+      </div>
+      <div class="demo-terminal hero-demo" id="demo-terminal">
+        <div class="code-header">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="code-title">NovusDB demo.dlite</span>
+          <div class="demo-controls">
+            <button class="demo-play" title="Replay">▶ Replay</button>
+          </div>
+        </div>
+        <div class="demo-output"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="container stats-grid">
+      <div class="stat">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Single file to deploy</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Setup required</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">5s</div>
+        <div class="stat-label">To your first query</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">4</div>
+        <div class="stat-label">Languages supported</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Why NovusDB?</div>
+        <h2>Stop configuring.<br>Start building.</h2>
+        <p>No server to install. No schema to define. No migration to run.<br>Just drop it in and go.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">�</div>
+          <h3>Query Like You Already Know</h3>
+          <p>If you know SQL, you know NovusDB. SELECT, INSERT, JOINs, GROUP BY, HAVING, subqueries, UNION, CASE WHEN — the syntax you're used to, with no learning curve.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Your Data Is Safe</h3>
+          <p>Crash mid-write? No problem. The Write-Ahead Log recovers automatically. Every byte is CRC32 integrity-checked. ACID-compliant.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Fast Without Effort</h3>
+          <p>Persistent B+ Tree indexes give you O(log n) lookups out of the box. The query planner picks the right strategy — you just write SQL.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>Combine Your Data</h3>
+          <p>INNER, LEFT, RIGHT JOINs with automatic strategy: Hash Join O(n+m), Index Lookup O(n·log m), or Nested Loop fallback. NovusDB picks the fastest path.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📦</div>
+          <h3>No Schema? No Problem.</h3>
+          <p>Store nested documents, dynamic fields, mixed types, arrays. Use dot-notation for deep access: <code>user.address.city</code>. Native JSON insert support.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3>Safe Transactions</h3>
+          <p>BEGIN / COMMIT / ROLLBACK with undo log. Single-writer isolation, multi-reader concurrency. Either everything succeeds, or nothing changes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>Understand What Happens</h3>
+          <p>EXPLAIN shows cardinality, selectivity, and cost estimation. Need more control? Use Oracle-style hints like <code>/*+ INDEX_LOOKUP */</code> to tune manually.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🖥️</div>
+          <h3>Built-in Admin Panel</h3>
+          <p>Lumen (Vue 3 + Tailwind) gives you a SQL editor, collection browser, schema viewer, LRU cache stats, and full SQL export — no extra tools needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌍</div>
+          <h3>Works With Your Stack</h3>
+          <p>C shared library (cgo) with native wrappers: Python (ctypes), Node.js (ffi-napi), Java (JNA). One line to connect, one line to query.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Examples -->
+  <section id="code" class="code-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Developer Experience</div>
+        <h2>Up and running in 3 lines</h2>
+        <p>Pick your language. Open a file. Start querying. It really is that simple.</p>
+      </div>
+      <div class="code-tabs">
+        <button class="tab active" onclick="showTab('go')">Go</button>
+        <button class="tab" onclick="showTab('python')">Python</button>
+        <button class="tab" onclick="showTab('node')">Node.js</button>
+        <button class="tab" onclick="showTab('java')">Java</button>
+        <button class="tab" onclick="showTab('cli')">CLI</button>
+      </div>
+      <div class="code-panels">
+        <div class="code-panel active" id="tab-go">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+              <span class="code-title">main.go</span>
+            </div>
+            <pre><code>db, _ := api.<span class="c-fn">Open</span>(<span class="c-str">"app.dlite"</span>)
+<span class="c-kw">defer</span> db.<span class="c-fn">Close</span>()
+
+<span class="c-gray">// Insert documents</span>
+db.<span class="c-fn">Exec</span>(<span class="c-str">`INSERT INTO users VALUES (name="Alice", age=30)`</span>)
+db.<span class="c-fn">Exec</span>(<span class="c-str">`INSERT INTO users VALUES (name="Bob", age=25)`</span>)
+
+<span class="c-gray">// Query with JOIN</span>
+res, _ := db.<span class="c-fn">Exec</span>(<span class="c-str">`SELECT u.name, o.total
+  FROM users u
+  JOIN orders o ON u.name = o.user
+  WHERE o.total > 50
+  ORDER BY o.total DESC`</span>)
+
+<span class="c-gray">// Transactions</span>
+tx, _ := db.<span class="c-fn">Begin</span>()
+tx.<span class="c-fn">Exec</span>(<span class="c-str">`UPDATE accounts SET balance = balance - 100 WHERE id = 1`</span>)
+tx.<span class="c-fn">Exec</span>(<span class="c-str">`UPDATE accounts SET balance = balance + 100 WHERE id = 2`</span>)
+tx.<span class="c-fn">Commit</span>()</code></pre>
+          </div>
+        </div>
+        <div class="code-panel" id="tab-python">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+              <span class="code-title">app.py</span>
+            </div>
+            <pre><code><span class="c-kw">from</span> NovusDB <span class="c-kw">import</span> NovusDB
+
+<span class="c-kw">with</span> NovusDB(<span class="c-str">"app.dlite"</span>) <span class="c-kw">as</span> db:
+    <span class="c-gray"># Insert and query</span>
+    db.<span class="c-fn">exec</span>(<span class="c-str">'INSERT INTO users VALUES (name="Alice", age=30)'</span>)
+    result = db.<span class="c-fn">exec</span>(<span class="c-str">"SELECT * FROM users WHERE age > 25"</span>)
+
+    <span class="c-kw">for</span> doc <span class="c-kw">in</span> result[<span class="c-str">"docs"</span>]:
+        <span class="c-fn">print</span>(doc[<span class="c-str">"name"</span>], doc[<span class="c-str">"age"</span>])
+
+    <span class="c-gray"># Native JSON insert</span>
+    db.<span class="c-fn">insert_json</span>(<span class="c-str">"users"</span>, <span class="c-str">'{"name": "Bob", "tags": ["vip"]}'</span>)
+
+    <span class="c-gray"># Aggregations</span>
+    result = db.<span class="c-fn">exec</span>(<span class="c-str">"SELECT COUNT(*), AVG(age) FROM users"</span>)
+    <span class="c-fn">print</span>(result[<span class="c-str">"docs"</span>])</code></pre>
+          </div>
+        </div>
+        <div class="code-panel" id="tab-node">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+              <span class="code-title">app.js</span>
+            </div>
+            <pre><code><span class="c-kw">const</span> { NovusDB } = <span class="c-fn">require</span>(<span class="c-str">'./NovusDB'</span>);
+
+<span class="c-kw">const</span> db = <span class="c-kw">new</span> <span class="c-fn">NovusDB</span>(<span class="c-str">'app.dlite'</span>);
+
+<span class="c-gray">// Insert and query</span>
+db.<span class="c-fn">exec</span>(<span class="c-str">'INSERT INTO users VALUES (name="Alice", age=30)'</span>);
+<span class="c-kw">const</span> result = db.<span class="c-fn">exec</span>(<span class="c-str">'SELECT * FROM users'</span>);
+console.<span class="c-fn">log</span>(result.docs);
+
+<span class="c-gray">// JSON insert</span>
+db.<span class="c-fn">insertJSON</span>(<span class="c-str">'users'</span>, <span class="c-str">'{"name": "Bob", "age": 25}'</span>);
+
+<span class="c-gray">// Collections list</span>
+console.<span class="c-fn">log</span>(db.<span class="c-fn">collections</span>());
+
+db.<span class="c-fn">close</span>();</code></pre>
+          </div>
+        </div>
+        <div class="code-panel" id="tab-java">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+              <span class="code-title">App.java</span>
+            </div>
+            <pre><code><span class="c-kw">try</span> (NovusDB db = <span class="c-kw">new</span> <span class="c-fn">NovusDB</span>(<span class="c-str">"app.dlite"</span>)) {
+    <span class="c-gray">// Execute SQL</span>
+    String result = db.<span class="c-fn">exec</span>(<span class="c-str">"SELECT * FROM users"</span>);
+    System.out.<span class="c-fn">println</span>(result);
+
+    <span class="c-gray">// Insert JSON</span>
+    <span class="c-kw">long</span> id = db.<span class="c-fn">insertJSON</span>(<span class="c-str">"users"</span>,
+        <span class="c-str">"{\"name\": \"Alice\", \"age\": 30}"</span>);
+
+    <span class="c-gray">// List collections</span>
+    System.out.<span class="c-fn">println</span>(db.<span class="c-fn">collections</span>());
+}</code></pre>
+          </div>
+        </div>
+        <div class="code-panel" id="tab-cli">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+              <span class="code-title">terminal</span>
+            </div>
+            <pre><code><span class="c-gray">$</span> ./NovusDB mydata.dlite
+
+NovusDB&gt; <span class="c-kw">INSERT INTO</span> users <span class="c-kw">VALUES</span> (name=<span class="c-str">"Alice"</span>, age=<span class="c-num">30</span>)
+  OK — 1 row(s) affected, last ID: 1
+
+NovusDB&gt; <span class="c-kw">SELECT</span> * <span class="c-kw">FROM</span> users
+  [#1] name="Alice", age=30
+  --- 1 document(s)
+
+NovusDB&gt; .schema
+  users (1 document(s))
+    ├─ name    string (1/1 = 100%)
+    ├─ age     int64  (1/1 = 100%)
+
+NovusDB&gt; .tables
+  users</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Drivers -->
+  <section id="drivers" class="drivers">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Your language, your rules</div>
+        <h2>Works everywhere you do</h2>
+        <p>One library. Four languages. Same simple API. Connect in one line.</p>
+      </div>
+      <div class="drivers-grid">
+        <div class="driver-card">
+          <div class="driver-icon">🐹</div>
+          <h3>Go</h3>
+          <p>Native. No wrapper needed.</p>
+          <code>api.Open("db.dlite")</code>
+        </div>
+        <div class="driver-card">
+          <div class="driver-icon">🐍</div>
+          <h3>Python</h3>
+          <p>Zero dependencies. Just import.</p>
+          <code>from NovusDB import NovusDB</code>
+        </div>
+        <div class="driver-card">
+          <div class="driver-icon">🟢</div>
+          <h3>Node.js</h3>
+          <p>npm install and go.</p>
+          <code>const db = new NovusDB()</code>
+        </div>
+        <div class="driver-card">
+          <div class="driver-icon">☕</div>
+          <h3>Java</h3>
+          <p>AutoCloseable. Try-with-resources.</p>
+          <code>new NovusDB("db.dlite")</code>
+        </div>
+      </div>
+      <div class="drivers-arch">
+        <pre>
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│    Go    │  │  Python  │  │  Node.js │  │   Java   │
+│ (native) │  │ (ctypes) │  │(ffi-napi)│  │  (JNA)   │
+└────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
+     │             │              │              │
+     └─────────────┴──────┬───────┴──────────────┘
+                          │
+                 ┌────────▼────────┐
+                 │  novusdb.dll    │
+                 │  (C shared lib) │
+                 └────────┬────────┘
+                          │
+                 ┌────────▼────────┐
+                 │  NovusDB Core   │
+                 │   (Go engine)   │
+                 └─────────────────┘</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="pricing">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Simple pricing</div>
+        <h2>Free to start. Grow when you're ready.</h2>
+        <p>No credit card. No trial limits. Just download and build.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <div class="price-tier">Community</div>
+          <div class="price-amount">$0</div>
+          <div class="price-period">forever — no catch</div>
+          <ul>
+            <li>All features, no limits</li>
+            <li>Personal projects &amp; learning</li>
+            <li>Students &amp; academics</li>
+            <li>Non-profits &amp; open-source</li>
+            <li>Startups under $50K/year revenue</li>
+            <li>Full source code access</li>
+          </ul>
+          <a href="https://github.com/Felmond13/novusdb" class="btn btn-outline">Download Now</a>
+        </div>
+        <div class="price-card featured">
+          <div class="price-popular">For teams &amp; companies</div>
+          <div class="price-tier">Commercial</div>
+          <div class="price-amount">Let's talk</div>
+          <div class="price-period">flexible plans</div>
+          <ul>
+            <li>Everything in Community</li>
+            <li>Use in production &amp; SaaS</li>
+            <li>Companies &gt; $50K/year revenue</li>
+            <li>Priority support &amp; updates</li>
+            <li>Custom integrations</li>
+            <li>30-day free trial — no commitment</li>
+          </ul>
+          <a href="mailto:noureddine.boukadoum@gmail.com" class="btn btn-primary">Start Free Trial</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container cta-inner">
+      <h2>Ready to simplify your data layer?</h2>
+      <p>Join developers who chose simplicity over complexity.<br>One file. One minute. You're live.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/Felmond13/novusdb" class="btn btn-primary btn-lg">
+          Get NovusDB Free
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="mailto:noureddine.boukadoum@gmail.com" class="btn btn-outline btn-lg">Talk to Us</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo"><img src="logo.svg" alt="NovusDB" width="28" height="28" style="vertical-align:middle;margin-right:6px;">Doc<span style="color:#06b6d4;">Lite</span></span>
+        <p>&copy; 2026 Noureddine BOUKADOUM. All rights reserved.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#drivers">Drivers</a>
+          <a href="#pricing">Pricing</a>
+          <a href="playground.html">Playground</a>
+          <a href="https://github.com/Felmond13/novusdb" target="_blank">GitHub</a>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <a href="docs.html">Documentation</a>
+          <a href="https://github.com/Felmond13/novusdb/blob/main/drivers/README.md">Driver Docs</a>
+          <a href="https://github.com/Felmond13/novusdb/blob/main/lumen/README.md">Lumen UI</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="https://github.com/Felmond13/novusdb/blob/main/LICENSE">License</a>
+          <a href="mailto:noureddine.boukadoum@gmail.com">Contact</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="demo.js"></script>
+</body>
+</html>
