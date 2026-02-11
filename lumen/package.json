@@ -1,7 +1,7 @@
 {
   "name": "lumen",
   "version": "1.0.0",
-  "description": "Lumen — Interface web d'administration pour DocLite",
+  "description": "Lumen — Interface web d'administration pour NovusDB",
   "private": true,
   "type": "module",
   "scripts": {

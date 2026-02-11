@@ -55,7 +55,7 @@ function download() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'doclite_backup.sql'
+  a.download = 'NovusDB_backup.sql'
   a.click()
   URL.revokeObjectURL(url)
 }

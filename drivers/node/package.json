@@ -1,8 +1,8 @@
 {
-  "name": "doclite",
+  "name": "NovusDB",
   "version": "1.0.0",
-  "description": "DocLite Node.js Driver — FFI wrapper over the DocLite C shared library",
-  "main": "doclite.js",
+  "description": "NovusDB Node.js Driver — FFI wrapper over the NovusDB C shared library",
+  "main": "NovusDB.js",
   "license": "Proprietary",
   "dependencies": {
     "ffi-napi": "^4.0.3",

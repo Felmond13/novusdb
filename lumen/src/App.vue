@@ -13,7 +13,7 @@
           </div>
           <div>
             <h1 class="text-sm font-bold text-white tracking-wide">Lumen</h1>
-            <p class="text-[10px] text-gray-500 uppercase tracking-widest">DocLite Studio</p>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest">NovusDB Studio</p>
           </div>
         </div>
       </div>

@@ -144,7 +144,7 @@ async function run() {
     }
     executed.value = true
   } catch (e) {
-    error.value = 'Connexion impossible au serveur DocLite'
+    error.value = 'Connexion impossible au serveur NovusDB'
     execTime.value = null
   } finally {
     loading.value = false

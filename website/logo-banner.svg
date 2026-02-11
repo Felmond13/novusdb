@@ -23,7 +23,7 @@
     <rect x="52" y="85" width="22" height="3" rx="1.5" fill="#06b6d4" opacity="0.4"/>
     <!-- Diamond -->
     <path d="M68 34 L74 42 L68 50 L62 42 Z" fill="url(#g2)"/>
-    <!-- Text: DocLite -->
-    <text x="155" y="85" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="#e4e4ef">Doc<tspan fill="url(#g2)">Lite</tspan></text>
+    <!-- Text: NovusDB -->
+    <text x="155" y="85" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="#e4e4ef">Novus<tspan fill="url(#g2)">DB</tspan></text>
   </g>
 </svg>

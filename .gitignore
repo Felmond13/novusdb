@@ -6,10 +6,10 @@
 *.dylib
 
 # Exception : garder la DLL des drivers
-!drivers/c/doclite.dll
-!drivers/python/doclite.dll
-!drivers/node/doclite.dll
-!drivers/java/doclite.dll
+!drivers/c/NovusDB.dll
+!drivers/python/NovusDB.dll
+!drivers/node/NovusDB.dll
+!drivers/java/NovusDB.dll
 
 # Fichiers de test
 *.test
@@ -18,7 +18,7 @@
 code_py_test.py
 test_large.json
 
-# Fichiers de base DocLite
+# Fichiers de base NovusDB
 *.dlite
 *.db
 *.wal

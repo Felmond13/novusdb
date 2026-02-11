@@ -1,7 +1,7 @@
 -- ============================================================================
--- DocLite — Tests complexes sur données nested / JSON
+-- NovusDB — Tests complexes sur données nested / JSON
 -- Base: series.dlite
--- Usage: doclite series.dlite < tests/nested_complex_test.sql
+-- Usage: NovusDB series.dlite < tests/nested_complex_test.sql
 -- ============================================================================
 
 -- ============================================================================
