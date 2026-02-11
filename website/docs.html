@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-STZ5VWVC4X"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-STZ5VWVC4X');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovusDB Documentation — Full SQL Reference & API Guide</title>
+  <meta name="description" content="Complete documentation for NovusDB: SQL reference, Go API, Python/Node.js/Java drivers, query hints, sequences, transactions, and more.">
+  <link rel="canonical" href="https://novusdb.dev/docs">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://novusdb.dev/docs">
+  <meta property="og:title" content="NovusDB Documentation">
+  <meta property="og:description" content="Complete documentation for NovusDB: SQL reference, Go API, drivers, and more.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Docs-specific styles */
+    .docs-layout {
+      display: flex;
+      gap: 0;
+      padding-top: 64px;
+      min-height: 100vh;
+    }
+    .docs-sidebar {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 260px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      z-index: 50;
+    }
+    .docs-sidebar::-webkit-scrollbar { width: 4px; }
+    .docs-sidebar::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+    .sidebar-section { margin-bottom: 24px; }
+    .sidebar-title {
+      padding: 0 20px;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .sidebar-link {
+      display: block;
+      padding: 6px 20px;
+      font-size: .85rem;
+      color: var(--text-muted);
+      transition: all .15s;
+      border-left: 2px solid transparent;
+    }
+    .sidebar-link:hover {
+      color: var(--text);
+      background: rgba(99,102,241,.05);
+    }
+    .sidebar-link.active {
+      color: var(--primary-light);
+      border-left-color: var(--primary);
+      background: rgba(99,102,241,.08);
+    }
+    .docs-content {
+      margin-left: 260px;
+      flex: 1;
+      max-width: 860px;
+      padding: 48px 48px 120px;
+    }
+    .docs-content h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .docs-content h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -.5px;
+      margin: 56px 0 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    .docs-content h2:first-of-type { border-top: none; margin-top: 32px; }
+    .docs-content h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--primary-light);
+    }
+    .docs-content p {
+      color: var(--text-muted);
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .docs-content ul, .docs-content ol {
+      color: var(--text-muted);
+      margin: 0 0 16px 20px;
+      line-height: 1.8;
+    }
+    .docs-content li { margin-bottom: 4px; }
+    .docs-content code {
+      font-family: var(--mono);
+      font-size: .85em;
+      background: rgba(99,102,241,.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--primary-light);
+    }
+    .docs-content pre {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      overflow-x: auto;
+      margin: 0 0 20px;
+      font-size: .84rem;
+      line-height: 1.7;
+    }
+    .docs-content pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+    }
+    .docs-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 20px;
+      font-size: .88rem;
+    }
+    .docs-content th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .docs-content td {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .docs-content td code {
+      font-size: .82em;
+    }
+    .docs-intro {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+    .docs-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .badge-sql { background: rgba(6,182,212,.12); color: var(--accent); }
+    .badge-go { background: rgba(16,185,129,.12); color: var(--green); }
+    .badge-tip { background: rgba(245,158,11,.12); color: var(--yellow); }
+    .tip-box {
+      background: rgba(245,158,11,.06);
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 16px 0 20px;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+    .tip-box strong { color: var(--yellow); }
+    .info-box {
+      background: rgba(99,102,241,.06);
+      border: 1px solid rgba(99,102,241,.2);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 16px 0 20px;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+    .info-box strong { color: var(--primary-light); }
+
+    /* Mobile sidebar toggle */
+    .docs-sidebar-toggle {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 200;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,.4);
+    }
+    @media (max-width: 900px) {
+      .docs-sidebar { display: none; }
+      .docs-sidebar.open { display: block; width: 100%; }
+      .docs-content { margin-left: 0; padding: 32px 20px 100px; }
+      .docs-sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="NovusDB" width="32" height="32" style="vertical-align:middle;margin-right:8px;">Doc<span style="color:#06b6d4;">Lite</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="docs.html" style="color:var(--text);">Docs</a>
+        <a href="index.html#pricing">Pricing</a>
+        <a href="playground.html" class="btn btn-sm" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.25);">&#9654; Playground</a>
+        <a href="https://github.com/Felmond13/novusdb" target="_blank" class="btn btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="docs-layout">
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Getting Started</div>
+        <a href="#introduction" class="sidebar-link active">Introduction</a>
+        <a href="#installation" class="sidebar-link">Installation</a>
+        <a href="#quickstart" class="sidebar-link">Quick Start</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">SQL Reference</div>
+        <a href="#insert" class="sidebar-link">INSERT</a>
+        <a href="#select" class="sidebar-link">SELECT</a>
+        <a href="#update" class="sidebar-link">UPDATE</a>
+        <a href="#delete" class="sidebar-link">DELETE</a>
+        <a href="#joins" class="sidebar-link">JOIN</a>
+        <a href="#aggregations" class="sidebar-link">Aggregations</a>
+        <a href="#subqueries" class="sidebar-link">Subqueries</a>
+        <a href="#union" class="sidebar-link">UNION</a>
+        <a href="#case-when" class="sidebar-link">CASE / WHEN</a>
+        <a href="#nested-json" class="sidebar-link">Nested JSON</a>
+        <a href="#json-insert" class="sidebar-link">JSON Insert</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Features</div>
+        <a href="#indexes" class="sidebar-link">Indexes</a>
+        <a href="#views" class="sidebar-link">Views</a>
+        <a href="#sequences" class="sidebar-link">Sequences</a>
+        <a href="#dates" class="sidebar-link">Date Functions</a>
+        <a href="#transactions" class="sidebar-link">Transactions</a>
+        <a href="#hints" class="sidebar-link">Query Hints</a>
+        <a href="#explain" class="sidebar-link">EXPLAIN</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">API Reference</div>
+        <a href="#go-api" class="sidebar-link">Go API</a>
+        <a href="#python-driver" class="sidebar-link">Python</a>
+        <a href="#nodejs-driver" class="sidebar-link">Node.js</a>
+        <a href="#java-driver" class="sidebar-link">Java</a>
+        <a href="#c-api" class="sidebar-link">C Shared Library</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Tools</div>
+        <a href="#cli" class="sidebar-link">CLI</a>
+        <a href="#dot-commands" class="sidebar-link">Dot Commands</a>
+        <a href="#functions" class="sidebar-link">Built-in Functions</a>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="docs-content">
+
+      <!-- Introduction -->
+      <h1 id="introduction">Documentation</h1>
+      <p class="docs-intro">
+        NovusDB is an embedded document database written in pure Go. It stores JSON documents in a single file
+        and lets you query them with full SQL. No server, no config, no dependencies.
+      </p>
+
+      <!-- Installation -->
+      <h2 id="installation">Installation</h2>
+
+      <h3>Go (native)</h3>
+<pre><code>git clone https://github.com/Felmond13/novusdb.git
+cd NovusDB
+go build ./...</code></pre>
+      <p>Then import the <code>api</code> package in your project:</p>
+<pre><code>import "github.com/Felmond13/novusdb/api"</code></pre>
+
+      <h3>CLI binary</h3>
+      <p>Download the latest release from <a href="https://github.com/Felmond13/novusdb/releases">GitHub Releases</a>, or build from source:</p>
+<pre><code>git clone https://github.com/Felmond13/novusdb.git
+cd NovusDB
+go build -o NovusDB ./cmd/NovusDB/</code></pre>
+
+      <h3>Drivers (Python, Node.js, Java)</h3>
+      <p>All drivers use a single C shared library built from Go. Build it first:</p>
+<pre><code># Windows (requires MinGW)
+.\drivers\build.ps1
+
+# Linux / macOS
+./drivers/build.sh</code></pre>
+      <p>This produces <code>novusdb.dll</code> (Windows), <code>libnovusdb.so</code> (Linux), or <code>libnovusdb.dylib</code> (macOS).</p>
+
+      <!-- Quick Start -->
+      <h2 id="quickstart">Quick Start</h2>
+<pre><code>package main
+
+import (
+    "fmt"
+    "github.com/NovusDB/NovusDB/api"
+)
+
+func main() {
+    db, _ := api.Open("myapp.dlite")
+    defer db.Close()
+
+    // Insert documents
+    db.Exec(`INSERT INTO users VALUES (name="Alice", age=30, role="admin")`)
+    db.Exec(`INSERT INTO users VALUES (name="Bob", age=25, role="user")`)
+
+    // Query
+    res, _ := db.Exec(`SELECT name, age FROM users WHERE age > 20 ORDER BY age DESC`)
+    for _, doc := range res.Docs {
+        fmt.Println(doc.Doc)
+    }
+}</code></pre>
+
+      <div class="tip-box">
+        <strong>Tip:</strong> Collections are created automatically on the first INSERT. No CREATE TABLE needed.
+      </div>
+
+      <!-- ==================== SQL REFERENCE ==================== -->
+
+      <!-- INSERT -->
+      <h2 id="insert">INSERT</h2>
+      <p>Insert documents with named field assignments. Collections are created automatically.</p>
+
+      <h3>Basic insert</h3>
+<pre><code>INSERT INTO users VALUES (name="Alice", age=30, role="admin")</code></pre>
+
+      <h3>Batch insert</h3>
+<pre><code>INSERT INTO users VALUES
+  (name="Alice", age=30),
+  (name="Bob", age=25),
+  (name="Charlie", age=35)</code></pre>
+
+      <h3>Insert with nested documents</h3>
+<pre><code>INSERT INTO users VALUES (
+  name="Alice",
+  address={city="Paris", zip="75001"},
+  tags=["admin", "vip"]
+)</code></pre>
+
+      <h3>INSERT OR REPLACE</h3>
+<pre><code>INSERT OR REPLACE INTO config VALUES (key="theme", value="dark")</code></pre>
+
+      <h3>INSERT ... SELECT</h3>
+<pre><code>INSERT INTO archive SELECT * FROM logs WHERE created &lt; "2025-01-01"</code></pre>
+
+      <!-- SELECT -->
+      <h2 id="select">SELECT</h2>
+      <p>Full SQL SELECT with filtering, sorting, pagination, and aliasing.</p>
+
+<pre><code>SELECT * FROM users
+
+SELECT name, age FROM users WHERE age > 25
+
+SELECT name AS username, age FROM users
+  WHERE role = "admin"
+  ORDER BY age DESC
+  LIMIT 10 OFFSET 5
+
+SELECT DISTINCT role FROM users</code></pre>
+
+      <h3>Operators</h3>
+      <table>
+        <tr><th>Operator</th><th>Example</th></tr>
+        <tr><td><code>=</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></td><td><code>WHERE age &gt;= 18</code></td></tr>
+        <tr><td><code>AND</code>, <code>OR</code>, <code>NOT</code></td><td><code>WHERE age &gt; 18 AND role = "admin"</code></td></tr>
+        <tr><td><code>IS NULL</code>, <code>IS NOT NULL</code></td><td><code>WHERE email IS NOT NULL</code></td></tr>
+        <tr><td><code>LIKE</code>, <code>NOT LIKE</code></td><td><code>WHERE name LIKE "Al%"</code></td></tr>
+        <tr><td><code>IN</code>, <code>NOT IN</code></td><td><code>WHERE role IN ("admin", "mod")</code></td></tr>
+        <tr><td><code>BETWEEN</code></td><td><code>WHERE age BETWEEN 18 AND 65</code></td></tr>
+      </table>
+
+      <!-- UPDATE -->
+      <h2 id="update">UPDATE</h2>
+<pre><code>UPDATE users SET age = 31 WHERE name = "Alice"
+
+UPDATE users SET role = "moderator", active = true
+  WHERE age > 30 AND role = "user"</code></pre>
+
+      <!-- DELETE -->
+      <h2 id="delete">DELETE</h2>
+<pre><code>DELETE FROM users WHERE role = "guest"
+
+DELETE FROM logs WHERE created &lt; "2024-01-01"</code></pre>
+
+      <p>Other table operations:</p>
+<pre><code>-- Drop an entire collection
+DROP TABLE users
+DROP TABLE IF EXISTS temp_data
+
+-- Remove all documents but keep the collection
+TRUNCATE TABLE logs</code></pre>
+
+      <!-- JOINS -->
+      <h2 id="joins">JOIN</h2>
+      <p>NovusDB supports INNER, LEFT, and RIGHT joins. The query planner automatically picks the best strategy: Hash Join, Index Lookup, or Nested Loop.</p>
+
+<pre><code>-- Inner join
+SELECT u.name, o.total
+  FROM users u
+  INNER JOIN orders o ON u.name = o.customer
+  WHERE o.total > 100
+
+-- Left join (keep all users even without orders)
+SELECT u.name, o.total
+  FROM users u
+  LEFT JOIN orders o ON u.name = o.customer
+
+-- Right join
+SELECT u.name, o.total
+  FROM users u
+  RIGHT JOIN orders o ON u.name = o.customer
+
+-- Multi-table join
+SELECT u.name, o.total, p.name AS product
+  FROM users u
+  JOIN orders o ON u.name = o.customer
+  JOIN products p ON o.product_id = p.id</code></pre>
+
+      <div class="info-box">
+        <strong>Join strategies:</strong> NovusDB automatically selects Hash Join O(n+m), Index Lookup O(n&middot;log m), or Nested Loop O(n&middot;m). Use query hints to override.
+      </div>
+
+      <!-- Aggregations -->
+      <h2 id="aggregations">Aggregations</h2>
+<pre><code>SELECT COUNT(*) FROM users
+
+SELECT role, COUNT(*), AVG(age), MIN(age), MAX(age)
+  FROM users
+  GROUP BY role
+
+SELECT role, COUNT(*) AS cnt
+  FROM users
+  GROUP BY role
+  HAVING cnt > 5
+  ORDER BY cnt DESC
+
+SELECT COUNT(DISTINCT role) FROM users</code></pre>
+
+      <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>COUNT(*)</code></td><td>Number of documents</td></tr>
+        <tr><td><code>COUNT(field)</code></td><td>Non-null values count</td></tr>
+        <tr><td><code>COUNT(DISTINCT field)</code></td><td>Unique values count</td></tr>
+        <tr><td><code>SUM(field)</code></td><td>Sum of numeric values</td></tr>
+        <tr><td><code>AVG(field)</code></td><td>Average of numeric values</td></tr>
+        <tr><td><code>MIN(field)</code></td><td>Minimum value</td></tr>
+        <tr><td><code>MAX(field)</code></td><td>Maximum value</td></tr>
+      </table>
+
+      <!-- Subqueries -->
+      <h2 id="subqueries">Subqueries</h2>
+<pre><code>-- Subquery in WHERE
+SELECT * FROM users
+  WHERE age > (SELECT AVG(age) FROM users)
+
+-- Subquery with IN
+SELECT * FROM users
+  WHERE name IN (SELECT customer FROM orders WHERE total > 100)
+
+-- Correlated subquery
+SELECT * FROM users u
+  WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer = u.name)</code></pre>
+
+      <!-- UNION -->
+      <h2 id="union">UNION</h2>
+<pre><code>-- Combine results (removes duplicates)
+SELECT name FROM admins
+UNION
+SELECT name FROM moderators
+
+-- Keep duplicates
+SELECT name FROM admins
+UNION ALL
+SELECT name FROM moderators</code></pre>
+
+      <!-- CASE WHEN -->
+      <h2 id="case-when">CASE / WHEN</h2>
+<pre><code>SELECT name,
+  CASE
+    WHEN age &lt; 18 THEN "minor"
+    WHEN age &lt; 65 THEN "adult"
+    ELSE "senior"
+  END AS category
+FROM users</code></pre>
+
+      <!-- Nested JSON -->
+      <h2 id="nested-json">Nested JSON &amp; Dot-Notation</h2>
+      <p>NovusDB stores documents as nested JSON. Use dot-notation to access any depth.</p>
+
+<pre><code>-- Insert nested document
+INSERT INTO users VALUES (
+  name="Alice",
+  address={city="Paris", country="FR", geo={lat=48.85, lon=2.35}},
+  tags=["admin", "vip"]
+)
+
+-- Query nested fields
+SELECT * FROM users WHERE address.city = "Paris"
+SELECT * FROM users WHERE address.geo.lat > 48.0
+
+-- Update nested field
+UPDATE users SET address.city = "Lyon" WHERE name = "Alice"</code></pre>
+
+      <!-- JSON Insert -->
+      <h2 id="json-insert">Native JSON Insert</h2>
+      <p>The Go API and all drivers support inserting raw JSON strings directly.</p>
+
+<pre><code>// Go
+db.InsertJSON("users", `{"name": "Alice", "age": 30, "tags": ["admin"]}`)
+
+// SQL equivalent
+INSERT INTO users VALUES (name="Alice", age=30, tags=["admin"])</code></pre>
+
+      <!-- ==================== FEATURES ==================== -->
+
+      <!-- Indexes -->
+      <h2 id="indexes">Indexes</h2>
+      <p>Persistent B+ Tree indexes for O(log n) lookups. The query planner uses them automatically.</p>
+
+<pre><code>-- Create an index
+CREATE INDEX ON users (email)
+CREATE INDEX IF NOT EXISTS ON users (age)
+
+-- Drop an index
+DROP INDEX ON users (email)
+DROP INDEX IF EXISTS ON users (age)</code></pre>
+
+      <div class="tip-box">
+        <strong>Tip:</strong> Use <code>EXPLAIN</code> to verify your queries use indexes. Create indexes on fields you filter or join on frequently.
+      </div>
+
+      <!-- Views -->
+      <h2 id="views">Views</h2>
+<pre><code>-- Create a view
+CREATE VIEW active_admins AS
+  SELECT name, email FROM users WHERE role = "admin" AND active = true
+
+-- Query the view like a table
+SELECT * FROM active_admins
+
+-- Drop a view
+DROP VIEW active_admins
+DROP VIEW IF EXISTS active_admins</code></pre>
+
+      <!-- Sequences -->
+      <h2 id="sequences">Sequences</h2>
+      <p>Oracle-style sequences for auto-incrementing values. Supports integer and decimal increments.</p>
+
+<pre><code>-- Create a sequence
+CREATE SEQUENCE user_seq START WITH 1 INCREMENT BY 1 MAXVALUE 999999
+
+-- With all options
+CREATE SEQUENCE order_seq
+  START WITH 1000
+  INCREMENT BY 1
+  MINVALUE 1
+  MAXVALUE 9999999
+  NOCYCLE
+
+-- Decimal increment
+CREATE SEQUENCE version_seq START WITH 1.0 INCREMENT BY 0.001
+
+-- Use in INSERT
+INSERT INTO users VALUES (id=user_seq.NEXTVAL, name="Alice")
+
+-- Read current value (without incrementing)
+SELECT order_seq.CURRVAL FROM orders
+
+-- Drop a sequence
+DROP SEQUENCE user_seq
+DROP SEQUENCE IF EXISTS user_seq</code></pre>
+
+      <table>
+        <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        <tr><td><code>START WITH n</code></td><td>1</td><td>Initial value</td></tr>
+        <tr><td><code>INCREMENT BY n</code></td><td>1</td><td>Step (integer or decimal)</td></tr>
+        <tr><td><code>MINVALUE n</code></td><td>1</td><td>Minimum value</td></tr>
+        <tr><td><code>MAXVALUE n</code></td><td>9999999999</td><td>Maximum value</td></tr>
+        <tr><td><code>CYCLE / NOCYCLE</code></td><td>NOCYCLE</td><td>Wrap around at MAXVALUE</td></tr>
+      </table>
+
+      <!-- Dates -->
+      <h2 id="dates">Date Functions</h2>
+      <p>Date functions return the current date/time as ISO-formatted strings.</p>
+
+<pre><code>-- Insert with current datetime
+INSERT INTO logs VALUES (msg="started", created=SYSDATE)
+INSERT INTO logs VALUES (msg="started", created=NOW())
+
+-- Insert with date only
+INSERT INTO events VALUES (title="Meeting", day=CURRENT_DATE)
+
+-- Insert with full precision timestamp
+INSERT INTO audit VALUES (action="login", ts=CURRENT_TIMESTAMP)
+
+-- Use in WHERE clause
+DELETE FROM logs WHERE created &lt; SYSDATE</code></pre>
+
+      <table>
+        <tr><th>Function</th><th>Format</th><th>Example output</th></tr>
+        <tr><td><code>SYSDATE</code></td><td><code>YYYY-MM-DD HH:MM:SS</code></td><td>2026-02-11 01:30:45</td></tr>
+        <tr><td><code>NOW()</code></td><td><code>YYYY-MM-DD HH:MM:SS</code></td><td>2026-02-11 01:30:45</td></tr>
+        <tr><td><code>CURRENT_DATE</code></td><td><code>YYYY-MM-DD</code></td><td>2026-02-11</td></tr>
+        <tr><td><code>CURRENT_TIMESTAMP</code></td><td>RFC 3339 Nano</td><td>2026-02-11T01:30:45.123456789+01:00</td></tr>
+      </table>
+
+      <div class="info-box">
+        <strong>Note:</strong> Dates are stored as strings. Use ISO format (YYYY-MM-DD) to ensure correct sorting and comparison with standard operators (<code>&lt;</code>, <code>&gt;</code>, <code>=</code>).
+      </div>
+
+      <!-- Transactions -->
+      <h2 id="transactions">Transactions</h2>
+      <p>ACID transactions with undo log. Single-writer isolation, multi-reader concurrency.</p>
+
+<pre><code>-- SQL (CLI)
+BEGIN
+UPDATE accounts SET balance = balance - 100 WHERE id = 1
+UPDATE accounts SET balance = balance + 100 WHERE id = 2
+COMMIT
+
+-- Or rollback on error
+BEGIN
+UPDATE accounts SET balance = balance - 100 WHERE id = 1
+ROLLBACK</code></pre>
+
+<pre><code>// Go API
+tx, _ := db.Begin()
+
+tx.Exec(`UPDATE accounts SET balance = balance - 100 WHERE id = 1`)
+tx.Exec(`UPDATE accounts SET balance = balance + 100 WHERE id = 2`)
+
+err := tx.Commit()  // or tx.Rollback()
+</code></pre>
+
+      <!-- Query Hints -->
+      <h2 id="hints">Query Hints</h2>
+      <p>Oracle-style query hints to control execution. Place them after SELECT, UPDATE, or DELETE.</p>
+
+<pre><code>-- Force full table scan (ignore indexes)
+SELECT /*+ FULL_SCAN */ * FROM users WHERE age > 25
+
+-- Force a specific index
+SELECT /*+ FORCE_INDEX(age) */ * FROM users WHERE age > 25
+
+-- Force join strategy
+SELECT /*+ HASH_JOIN */ u.name, o.total
+  FROM users u
+  JOIN orders o ON u.name = o.customer
+
+SELECT /*+ NESTED_LOOP */ u.name, o.total
+  FROM users u
+  JOIN orders o ON u.name = o.customer
+
+-- Disable page cache for this query
+SELECT /*+ NO_CACHE */ * FROM logs</code></pre>
+
+      <table>
+        <tr><th>Hint</th><th>Effect</th></tr>
+        <tr><td><code>/*+ FULL_SCAN */</code></td><td>Force full collection scan, bypass indexes</td></tr>
+        <tr><td><code>/*+ FORCE_INDEX(field) */</code></td><td>Force use of a specific index</td></tr>
+        <tr><td><code>/*+ HASH_JOIN */</code></td><td>Force Hash Join strategy for JOINs</td></tr>
+        <tr><td><code>/*+ NESTED_LOOP */</code></td><td>Force Nested Loop strategy for JOINs</td></tr>
+        <tr><td><code>/*+ NO_CACHE */</code></td><td>Bypass page cache for this query</td></tr>
+        <tr><td><code>/*+ PARALLEL(n) */</code></td><td>Parallelism hint</td></tr>
+      </table>
+
+      <!-- EXPLAIN -->
+      <h2 id="explain">EXPLAIN</h2>
+      <p>Inspect the query execution plan: scan strategy, index usage, cardinality, selectivity, and cost.</p>
+
+<pre><code>EXPLAIN SELECT * FROM users WHERE age > 25
+
+EXPLAIN SELECT u.name, o.total
+  FROM users u
+  JOIN orders o ON u.name = o.customer
+  WHERE o.total > 100</code></pre>
+
+      <!-- ==================== API REFERENCE ==================== -->
+
+      <!-- Go API -->
+      <h2 id="go-api">Go API</h2>
+
+      <h3>Opening a database</h3>
+<pre><code>// File-based (persistent)
+db, err := api.Open("myapp.dlite")
+defer db.Close()
+
+// In-memory (for testing / WASM)
+db, err := api.OpenMemory()</code></pre>
+
+      <h3>Executing queries</h3>
+<pre><code>// Execute any SQL statement
+result, err := db.Exec(`SELECT * FROM users WHERE age > 25`)
+
+// Result struct
+result.Docs         // []ResultDoc — returned documents
+result.RowsAffected // int64 — rows modified (INSERT/UPDATE/DELETE)
+result.LastID       // uint64 — last inserted record ID</code></pre>
+
+      <h3>Inserting JSON</h3>
+<pre><code>id, err := db.InsertJSON("users", `{"name": "Alice", "age": 30, "tags": ["admin"]}`)</code></pre>
+
+      <h3>Transactions</h3>
+<pre><code>tx, _ := db.Begin()
+tx.Exec(`UPDATE accounts SET balance = balance - 100 WHERE id = 1`)
+tx.Exec(`UPDATE accounts SET balance = balance + 100 WHERE id = 2`)
+tx.Commit()   // or tx.Rollback()</code></pre>
+
+      <h3>Introspection</h3>
+<pre><code>db.Collections()  // []string — list all collections
+db.IndexDefs()    // []IndexDef — list all indexes
+db.Schema()       // []CollectionSchema — full schema with field types
+db.Views()        // []string — list all views
+db.Sequences()    // map[string]*Sequence — list all sequences
+db.Dump()         // string — full SQL export
+db.Vacuum()       // compact deleted records</code></pre>
+
+      <h3>Cache &amp; performance</h3>
+<pre><code>hits, misses, size, capacity := db.CacheStats()
+hitRate := db.CacheHitRate()  // 0.0 to 1.0</code></pre>
+
+      <h3>Full method reference</h3>
+      <table>
+        <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+        <tr><td><code>api.Open(path)</code></td><td><code>*DB, error</code></td><td>Open or create a database file</td></tr>
+        <tr><td><code>api.OpenMemory()</code></td><td><code>*DB, error</code></td><td>Create an in-memory database</td></tr>
+        <tr><td><code>db.Close()</code></td><td><code>error</code></td><td>Close the database</td></tr>
+        <tr><td><code>db.Exec(sql)</code></td><td><code>*Result, error</code></td><td>Execute any SQL statement</td></tr>
+        <tr><td><code>db.InsertJSON(col, json)</code></td><td><code>uint64, error</code></td><td>Insert a raw JSON document</td></tr>
+        <tr><td><code>db.InsertDoc(col, doc)</code></td><td><code>uint64, error</code></td><td>Insert a Document object</td></tr>
+        <tr><td><code>db.Begin()</code></td><td><code>*Tx, error</code></td><td>Start a transaction</td></tr>
+        <tr><td><code>tx.Exec(sql)</code></td><td><code>*Result, error</code></td><td>Execute SQL within a transaction</td></tr>
+        <tr><td><code>tx.Commit()</code></td><td><code>error</code></td><td>Commit the transaction</td></tr>
+        <tr><td><code>tx.Rollback()</code></td><td><code>error</code></td><td>Rollback the transaction</td></tr>
+        <tr><td><code>db.Collections()</code></td><td><code>[]string</code></td><td>List collections</td></tr>
+        <tr><td><code>db.Schema()</code></td><td><code>[]CollectionSchema</code></td><td>Full schema with types</td></tr>
+        <tr><td><code>db.IndexDefs()</code></td><td><code>[]IndexDef</code></td><td>List index definitions</td></tr>
+        <tr><td><code>db.Views()</code></td><td><code>[]string</code></td><td>List views</td></tr>
+        <tr><td><code>db.Sequences()</code></td><td><code>map[string]*Sequence</code></td><td>List sequences</td></tr>
+        <tr><td><code>db.Dump()</code></td><td><code>string</code></td><td>Full SQL export</td></tr>
+        <tr><td><code>db.Vacuum()</code></td><td><code>int, error</code></td><td>Compact deleted records</td></tr>
+        <tr><td><code>db.CacheStats()</code></td><td><code>hits, misses, size, cap</code></td><td>LRU page cache stats</td></tr>
+        <tr><td><code>db.CacheHitRate()</code></td><td><code>float64</code></td><td>Cache hit ratio (0.0-1.0)</td></tr>
+        <tr><td><code>db.SetLockPolicy(p)</code></td><td>&mdash;</td><td>Set lock policy (Wait or Fail)</td></tr>
+      </table>
+
+      <!-- Python -->
+      <h2 id="python-driver">Python Driver</h2>
+      <p>Uses <code>ctypes</code> from the standard library. Zero dependencies.</p>
+
+<pre><code>from NovusDB import NovusDB
+
+with NovusDB("myapp.dlite") as db:
+    # Execute SQL
+    db.exec('INSERT INTO users VALUES (name="Alice", age=30)')
+    result = db.exec("SELECT * FROM users WHERE age > 25")
+
+    for doc in result["docs"]:
+        print(doc["name"], doc["age"])
+
+    # Insert raw JSON
+    db.insert_json("users", '{"name": "Bob", "tags": ["vip"]}')
+
+    # List collections
+    print(db.collections())</code></pre>
+
+      <!-- Node.js -->
+      <h2 id="nodejs-driver">Node.js Driver</h2>
+      <p>Requires <code>ffi-napi</code> and <code>ref-napi</code>.</p>
+
+<pre><code>const { NovusDB } = require('./NovusDB');
+
+const db = new NovusDB('myapp.dlite');
+
+db.exec('INSERT INTO users VALUES (name="Alice", age=30)');
+const result = db.exec('SELECT * FROM users');
+console.log(result.docs);
+
+db.insertJSON('users', '{"name": "Bob", "age": 25}');
+console.log(db.collections());
+
+db.close();</code></pre>
+
+      <!-- Java -->
+      <h2 id="java-driver">Java Driver</h2>
+      <p>Uses JNA (Java Native Access). Implements <code>AutoCloseable</code> for try-with-resources.</p>
+
+<pre><code>try (NovusDB db = new NovusDB("myapp.dlite")) {
+    // Execute SQL
+    String result = db.exec("SELECT * FROM users");
+    System.out.println(result);
+
+    // Insert JSON
+    long id = db.insertJSON("users", "{\"name\": \"Alice\", \"age\": 30}");
+
+    // List collections
+    System.out.println(db.collections());
+}</code></pre>
+
+      <!-- C API -->
+      <h2 id="c-api">C Shared Library</h2>
+      <p>All drivers use this C API under the hood. You can call it directly from any language with FFI support.</p>
+
+<pre><code>#include "NovusDB.h"
+
+long long db = NovusDB_open("myapp.dlite");
+
+char* result = NovusDB_exec(db, "SELECT * FROM users");
+printf("%s\n", result);
+NovusDB_free(result);
+
+long long id = NovusDB_insert_json(db, "users", "{\"name\": \"Alice\"}");
+
+char* cols = NovusDB_collections(db);
+printf("%s\n", cols);
+NovusDB_free(cols);
+
+NovusDB_close(db);</code></pre>
+
+      <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>NovusDB_open(path)</code></td><td>Open a database, returns a handle</td></tr>
+        <tr><td><code>NovusDB_close(handle)</code></td><td>Close the connection</td></tr>
+        <tr><td><code>NovusDB_exec(handle, sql)</code></td><td>Execute SQL, returns JSON string</td></tr>
+        <tr><td><code>NovusDB_insert_json(handle, col, json)</code></td><td>Insert a JSON document</td></tr>
+        <tr><td><code>NovusDB_collections(handle)</code></td><td>List collections (JSON)</td></tr>
+        <tr><td><code>NovusDB_error(handle)</code></td><td>Last error message</td></tr>
+        <tr><td><code>NovusDB_dump(handle)</code></td><td>Full SQL export</td></tr>
+        <tr><td><code>NovusDB_free(ptr)</code></td><td>Free a returned string</td></tr>
+      </table>
+
+      <!-- ==================== TOOLS ==================== -->
+
+      <!-- CLI -->
+      <h2 id="cli">CLI</h2>
+      <p>The CLI is an interactive REPL for querying and managing your database.</p>
+
+<pre><code># Open or create a database
+./NovusDB mydata.dlite
+
+# Execute a query and exit
+./NovusDB mydata.dlite -e "SELECT * FROM users"</code></pre>
+
+      <!-- Dot Commands -->
+      <h2 id="dot-commands">Dot Commands</h2>
+      <p>Special commands available in the CLI and the online playground.</p>
+
+      <table>
+        <tr><th>Command</th><th>Description</th></tr>
+        <tr><td><code>.tables</code></td><td>List all collections</td></tr>
+        <tr><td><code>.schema</code></td><td>Show collection schemas with field types and frequency</td></tr>
+        <tr><td><code>.indexes</code></td><td>List all indexes</td></tr>
+        <tr><td><code>.sequences</code></td><td>List all sequences with current values</td></tr>
+        <tr><td><code>.dump</code></td><td>Full SQL export (CREATE INDEX + INSERT INTO)</td></tr>
+        <tr><td><code>.help</code></td><td>Show available commands</td></tr>
+      </table>
+
+      <!-- Built-in Functions -->
+      <h2 id="functions">Built-in Functions</h2>
+
+      <h3>Aggregate Functions</h3>
+      <table>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+        <tr><td><code>COUNT(*)</code></td><td>Count all documents</td><td><code>SELECT COUNT(*) FROM users</code></td></tr>
+        <tr><td><code>COUNT(field)</code></td><td>Count non-null values</td><td><code>SELECT COUNT(email) FROM users</code></td></tr>
+        <tr><td><code>COUNT(DISTINCT field)</code></td><td>Count unique values</td><td><code>SELECT COUNT(DISTINCT role) FROM users</code></td></tr>
+        <tr><td><code>SUM(field)</code></td><td>Sum numeric values</td><td><code>SELECT SUM(total) FROM orders</code></td></tr>
+        <tr><td><code>AVG(field)</code></td><td>Average of numeric values</td><td><code>SELECT AVG(age) FROM users</code></td></tr>
+        <tr><td><code>MIN(field)</code></td><td>Minimum value</td><td><code>SELECT MIN(price) FROM products</code></td></tr>
+        <tr><td><code>MAX(field)</code></td><td>Maximum value</td><td><code>SELECT MAX(price) FROM products</code></td></tr>
+      </table>
+
+      <h3>Date Functions</h3>
+      <table>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+        <tr><td><code>SYSDATE</code></td><td>Current date and time (YYYY-MM-DD HH:MM:SS)</td><td><code>INSERT INTO logs VALUES (ts=SYSDATE)</code></td></tr>
+        <tr><td><code>NOW()</code></td><td>Same as SYSDATE</td><td><code>INSERT INTO logs VALUES (ts=NOW())</code></td></tr>
+        <tr><td><code>CURRENT_DATE</code></td><td>Current date only (YYYY-MM-DD)</td><td><code>INSERT INTO events VALUES (day=CURRENT_DATE)</code></td></tr>
+        <tr><td><code>CURRENT_TIMESTAMP</code></td><td>Full precision timestamp (RFC 3339)</td><td><code>INSERT INTO audit VALUES (ts=CURRENT_TIMESTAMP)</code></td></tr>
+      </table>
+
+      <h3>Sequence Functions</h3>
+      <table>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+        <tr><td><code>seq.NEXTVAL</code></td><td>Increment and return next value</td><td><code>INSERT INTO users VALUES (id=user_seq.NEXTVAL)</code></td></tr>
+        <tr><td><code>seq.CURRVAL</code></td><td>Return current value (no increment)</td><td><code>SELECT order_seq.CURRVAL FROM orders</code></td></tr>
+      </table>
+
+    </main>
+  </div>
+
+  <!-- Mobile sidebar toggle -->
+  <button class="docs-sidebar-toggle" onclick="document.getElementById('docs-sidebar').classList.toggle('open')">&#9776;</button>
+
+  <script>
+    // Highlight active sidebar link on scroll
+    const sections = document.querySelectorAll('[id]');
+    const links = document.querySelectorAll('.sidebar-link');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(s => {
+        if (window.scrollY >= s.offsetTop - 100) current = s.id;
+      });
+      links.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+      });
+    });
+  </script>
+</body>
+</html>

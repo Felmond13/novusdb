@@ -1,0 +1,11 @@
+{
+  "name": "doclite",
+  "version": "1.0.0",
+  "description": "DocLite Node.js Driver — FFI wrapper over the DocLite C shared library",
+  "main": "doclite.js",
+  "license": "Proprietary",
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.3"
+  }
+}

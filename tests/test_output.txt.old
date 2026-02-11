@@ -1,0 +1,383 @@
+﻿DocLite v1.0.0 ÔÇö Mini SGBD embarqu├® orient├® documents
+Tapez .help pour l'aide, .quit pour quitter.
+
+Base : series.dlite
+
+doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 1
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 2
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 3
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 4
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 5
+doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 6
+doclite> doclite> doclite> doclite> doclite> doclite>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 1
+doclite> doclite>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 2
+doclite> doclite>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 3
+doclite> doclite>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 4
+doclite> doclite>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>     ...>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 5
+doclite> doclite> doclite> doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 1
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 2
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 3
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 4
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 5
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 6
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 7
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 8
+doclite> doclite> doclite> doclite> doclite> doclite>   actors
+  series
+  reviews
+doclite> doclite>   actors (6 document(s))
+    Ôö£ÔöÇ age                       int64 (6/6 = 100%)
+    Ôö£ÔöÇ country                   string (6/6 = 100%)
+    Ôö£ÔöÇ awards.total              int64 (6/6 = 100%)
+    Ôö£ÔöÇ awards.cesar              int64 (1/6 = 17%)
+    Ôö£ÔöÇ name                      string (6/6 = 100%)
+    Ôö£ÔöÇ awards.emmys              int64 (6/6 = 100%)
+    Ôö£ÔöÇ awards.golden_globes      int64 (6/6 = 100%)
+    Ôö£ÔöÇ contact.agent.name        string (1/6 = 17%)
+    Ôö£ÔöÇ contact.agent.phone       string (1/6 = 17%)
+    Ôö£ÔöÇ contact.social.instagram  string (1/6 = 17%)
+
+  series (5 document(s))
+    Ôö£ÔöÇ title                     string (5/5 = 100%)
+    Ôö£ÔöÇ rating.rotten_tomatoes    int64 (5/5 = 100%)
+    Ôö£ÔöÇ status                    string (5/5 = 100%)
+    Ôö£ÔöÇ cast                      unknown (5/5 = 100%)
+    Ôö£ÔöÇ production.country        string (5/5 = 100%)
+    Ôö£ÔöÇ production.budget_per_episode int64 (5/5 = 100%)
+    Ôö£ÔöÇ year                      int64 (5/5 = 100%)
+    Ôö£ÔöÇ seasons                   int64 (5/5 = 100%)
+    Ôö£ÔöÇ genre                     unknown (5/5 = 100%)
+    Ôö£ÔöÇ rating.imdb               float64 (5/5 = 100%)
+    Ôö£ÔöÇ network                   string (5/5 = 100%)
+    Ôö£ÔöÇ creator                   string (5/5 = 100%)
+    Ôö£ÔöÇ production.company        string (5/5 = 100%)
+
+  reviews (8 document(s))
+    Ôö£ÔöÇ series_title              string (8/8 = 100%)
+    Ôö£ÔöÇ reviewer                  string (8/8 = 100%)
+    Ôö£ÔöÇ score                     int64 (8/8 = 100%)
+    Ôö£ÔöÇ detail.story              int64 (8/8 = 100%)
+    Ôö£ÔöÇ detail.acting             int64 (8/8 = 100%)
+    Ôö£ÔöÇ detail.visuals            int64 (8/8 = 100%)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston", age=68, country="USA", awards={emmys=4, golden_globes=1, total=5}
+  [#2] name="Aaron Paul", age=44, country="USA", awards={emmys=3, golden_globes=0, total=3}
+  [#3] name="Pedro Pascal", age=49, country="Chile", awards={emmys=0, golden_globes=1, total=1}
+  [#4] name="Jenna Ortega", age=21, country="USA", awards={emmys=0, golden_globes=0, total=0}
+  [#5] name="Omar Sy", age=46, country="France", awards={emmys=0, golden_globes=0, total=0, cesar=1}
+  [#6] name="Millie Bobby Brown", age=20, country="UK", awards={emmys=0, golden_globes=0, total=0}, contact={agent={name="WME", phone="+1-555-0100"}, social={instagram="milliebobbybrown"}}
+  --- 6 document(s)
+doclite>   [#1] title="Breaking Bad", year=2008, seasons=5, genre=["Drama", "Crime", "Thriller"], rating={imdb=9.5, rotten_tomatoes=96}, network="AMC", creator="Vince Gilligan", status="ended", cast=[{actor="Bryan Cranston", role="Walter White"}, {actor="Aaron Paul", role="Jesse Pinkman"}], production={company="Sony Pictures Television", country="USA", budget_per_episode=3000000}
+  [#2] title="The Last of Us", year=2023, seasons=2, genre=["Drama", "Action", "Sci-Fi"], rating={imdb=8.8, rotten_tomatoes=96}, network="HBO", creator="Craig Mazin", status="running", cast=[{actor="Pedro Pascal", role="Joel Miller"}, {actor="Bella Ramsey", role="Ellie Williams"}], production={company="PlayStation Productions", country="USA", budget_per_episode=10000000}
+  [#3] title="Wednesday", year=2022, seasons=2, genre=["Comedy", "Horror", "Mystery"], rating={imdb=8.1, rotten_tomatoes=73}, network="Netflix", creator="Tim Burton", status="running", cast=[{actor="Jenna Ortega", role="Wednesday Addams"}], production={company="MGM Television", country="USA", budget_per_episode=12000000}
+  [#4] title="Lupin", year=2021, seasons=3, genre=["Crime", "Drama", "Mystery"], rating={imdb=7.5, rotten_tomatoes=98}, network="Netflix", creator="George Kay", status="running", cast=[{actor="Omar Sy", role="Assane Diop"}], production={company="Gaumont", country="France", budget_per_episode=5000000}
+  [#5] title="Stranger Things", year=2016, seasons=4, genre=["Drama", "Fantasy", "Horror"], rating={imdb=8.7, rotten_tomatoes=91}, network="Netflix", creator="The Duffer Brothers", status="ended", cast=[{actor="Millie Bobby Brown", role="Eleven"}], production={company="21 Laps Entertainment", country="USA", budget_per_episode=30000000}
+  --- 5 document(s)
+doclite>   [#1] series_title="Breaking Bad", reviewer="John", score=10, detail={story=10, acting=10, visuals=9}
+  [#2] series_title="Breaking Bad", reviewer="Alice", score=9, detail={story=9, acting=10, visuals=8}
+  [#3] series_title="The Last of Us", reviewer="John", score=8, detail={story=9, acting=8, visuals=10}
+  [#4] series_title="The Last of Us", reviewer="Bob", score=9, detail={story=9, acting=9, visuals=10}
+  [#5] series_title="Wednesday", reviewer="Alice", score=7, detail={story=6, acting=8, visuals=9}
+  [#6] series_title="Lupin", reviewer="Alice", score=8, detail={story=8, acting=9, visuals=7}
+  [#7] series_title="Stranger Things", reviewer="Bob", score=8, detail={story=8, acting=7, visuals=9}
+  [#8] series_title="Stranger Things", reviewer="John", score=9, detail={story=9, acting=8, visuals=9}
+  --- 8 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] name="Bryan Cranston", awards.total=5
+  [#2] name="Aaron Paul", awards.total=3
+  [#3] name="Pedro Pascal", awards.total=1
+  [#4] name="Jenna Ortega", awards.total=0
+  [#5] name="Omar Sy", awards.total=0
+  [#6] name="Millie Bobby Brown", awards.total=0
+  --- 6 document(s)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston", awards.emmys=4
+  [#2] name="Aaron Paul", awards.emmys=3
+  --- 2 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.5, rating.rotten_tomatoes=96
+  [#2] title="The Last of Us", rating.imdb=8.8, rating.rotten_tomatoes=96
+  [#3] title="Wednesday", rating.imdb=8.1, rating.rotten_tomatoes=73
+  [#4] title="Lupin", rating.imdb=7.5, rating.rotten_tomatoes=98
+  [#5] title="Stranger Things", rating.imdb=8.7, rating.rotten_tomatoes=91
+  --- 5 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.5
+  [#2] title="The Last of Us", rating.imdb=8.8
+  [#5] title="Stranger Things", rating.imdb=8.7
+  --- 3 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", production.country="USA", production.budget_per_episode=3000000
+  [#2] title="The Last of Us", production.country="USA", production.budget_per_episode=10000000
+  [#3] title="Wednesday", production.country="USA", production.budget_per_episode=12000000
+  [#4] title="Lupin", production.country="France", production.budget_per_episode=5000000
+  [#5] title="Stranger Things", production.country="USA", production.budget_per_episode=30000000
+  --- 5 document(s)
+doclite> doclite> doclite>   [#4] title="Lupin"
+  --- 1 document(s)
+doclite> doclite> doclite>   [#6] name="Millie Bobby Brown", contact.agent.name="WME", contact.social.instagram="milliebobbybrown"
+  --- 1 document(s)
+doclite> doclite> doclite>   [#5] name="Omar Sy", awards.cesar=1
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   OK ÔÇö 0 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   OK ÔÇö 0 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   OK ÔÇö 0 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   actors (awards.total)
+  series (rating.imdb)
+  series (production.country)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston", awards.total=5
+  --- 1 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad"
+  [#2] title="The Last of Us"
+  [#5] title="Stranger Things"
+  --- 3 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] name="Bryan Cranston", awards.total=5
+  [#2] name="Aaron Paul", awards.total=3
+  [#3] name="Pedro Pascal", awards.total=1
+  [#4] name="Jenna Ortega", awards.total=0
+  [#5] name="Omar Sy", awards.total=0
+  [#6] name="Millie Bobby Brown", awards.total=0
+  --- 6 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.5
+  [#2] title="The Last of Us", rating.imdb=8.8
+  [#5] title="Stranger Things", rating.imdb=8.7
+  [#3] title="Wednesday", rating.imdb=8.1
+  [#4] title="Lupin", rating.imdb=7.5
+  --- 5 document(s)
+doclite> doclite> doclite>   [#5] title="Stranger Things", production.budget_per_episode=30000000
+  [#3] title="Wednesday", production.budget_per_episode=12000000
+  [#2] title="The Last of Us", production.budget_per_episode=10000000
+  --- 3 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#0] COUNT=4
+  [#0] COUNT=1
+  --- 2 document(s)
+doclite> doclite> doclite>   [#0] AVG=8.774999999999999
+  [#0] AVG=7.5
+  --- 2 document(s)
+doclite> doclite> doclite>   [#0] SUM=55000000
+  [#0] SUM=5000000
+  --- 2 document(s)
+doclite> doclite> doclite>   [#0] COUNT=4
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] series_title="Breaking Bad", AVG=8.5
+  [#0] series_title="The Last of Us", AVG=10
+  [#0] series_title="Wednesday", AVG=9
+  [#0] series_title="Lupin", AVG=7
+  [#0] series_title="Stranger Things", AVG=9
+  --- 5 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#0] s.title="Breaking Bad", r.reviewer="John", r.score=10
+  [#0] s.title="Breaking Bad", r.reviewer="Alice", r.score=9
+  [#0] s.title="The Last of Us", r.reviewer="John", r.score=8
+  [#0] s.title="The Last of Us", r.reviewer="Bob", r.score=9
+  [#0] s.title="Wednesday", r.reviewer="Alice", r.score=7
+  [#0] s.title="Lupin", r.reviewer="Alice", r.score=8
+  [#0] s.title="Stranger Things", r.reviewer="Bob", r.score=8
+  [#0] s.title="Stranger Things", r.reviewer="John", r.score=9
+  --- 8 document(s)
+doclite> doclite> doclite>   [#0] s.title="Breaking Bad", s.rating.imdb=9.5, r.reviewer="John", r.detail.story=10
+  [#0] s.title="Breaking Bad", s.rating.imdb=9.5, r.reviewer="Alice", r.detail.story=9
+  [#0] s.title="The Last of Us", s.rating.imdb=8.8, r.reviewer="John", r.detail.story=9
+  [#0] s.title="The Last of Us", s.rating.imdb=8.8, r.reviewer="Bob", r.detail.story=9
+  [#0] s.title="Wednesday", s.rating.imdb=8.1, r.reviewer="Alice", r.detail.story=6
+  [#0] s.title="Lupin", s.rating.imdb=7.5, r.reviewer="Alice", r.detail.story=8
+  [#0] s.title="Stranger Things", s.rating.imdb=8.7, r.reviewer="Bob", r.detail.story=8
+  [#0] s.title="Stranger Things", s.rating.imdb=8.7, r.reviewer="John", r.detail.story=9
+  --- 8 document(s)
+doclite> doclite> doclite>   [#0] s.title="Breaking Bad", r.reviewer="John", r.score=10
+  [#0] s.title="Breaking Bad", r.reviewer="Alice", r.score=9
+  [#0] s.title="The Last of Us", r.reviewer="John", r.score=8
+  [#0] s.title="The Last of Us", r.reviewer="Bob", r.score=9
+  [#0] s.title="Stranger Things", r.reviewer="Bob", r.score=8
+  [#0] s.title="Stranger Things", r.reviewer="John", r.score=9
+  --- 6 document(s)
+doclite> doclite> doclite>   [#0] s.title="Breaking Bad", r.reviewer="John"
+  [#0] s.title="Breaking Bad", r.reviewer="Alice"
+  [#0] s.title="The Last of Us", r.reviewer="Bob"
+  --- 3 document(s)
+doclite> doclite> doclite>   [#0] a.name="Bryan Cranston", s.title="Breaking Bad"
+  [#0] a.name="Bryan Cranston", s.title="The Last of Us"
+  [#0] a.name="Bryan Cranston", s.title="Wednesday"
+  [#0] a.name="Bryan Cranston", s.title="Stranger Things"
+  [#0] a.name="Aaron Paul", s.title="Breaking Bad"
+  [#0] a.name="Aaron Paul", s.title="The Last of Us"
+  [#0] a.name="Aaron Paul", s.title="Wednesday"
+  [#0] a.name="Aaron Paul", s.title="Stranger Things"
+  [#0] a.name="Jenna Ortega", s.title="Breaking Bad"
+  [#0] a.name="Jenna Ortega", s.title="The Last of Us"
+  [#0] a.name="Jenna Ortega", s.title="Wednesday"
+  [#0] a.name="Jenna Ortega", s.title="Stranger Things"
+  [#0] a.name="Omar Sy", s.title="Lupin"
+  --- 13 document(s)
+doclite> doclite> doclite>   [#0] s.title="Breaking Bad", r.reviewer="John"
+  [#0] s.title="Breaking Bad", r.reviewer="Alice"
+  [#0] s.title="The Last of Us", r.reviewer="John"
+  [#0] s.title="The Last of Us", r.reviewer="Bob"
+  [#0] s.title="Wednesday", r.reviewer="Alice"
+  [#0] s.title="Lupin", r.reviewer="Alice"
+  [#0] s.title="Stranger Things", r.reviewer="Bob"
+  [#0] s.title="Stranger Things", r.reviewer="John"
+  --- 8 document(s)
+doclite> doclite> doclite>   (aucun r├®sultat)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#0] avg_story=9.5, avg_acting=10
+  [#0] avg_story=9, avg_acting=8.5
+  [#0] avg_story=6, avg_acting=8
+  [#0] avg_story=8, avg_acting=9
+  [#0] avg_story=8.5, avg_acting=7.5
+  --- 5 document(s)
+doclite> doclite> doclite>   [#0] COUNT=7, AVG=8.571428571428571
+  [#0] COUNT=1, AVG=8
+  --- 2 document(s)
+doclite> doclite> doclite>   [#0] avg_score=9.5
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] title="Breaking Bad"
+  [#2] title="The Last of Us"
+  [#5] title="Stranger Things"
+  --- 3 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.5
+  [#2] title="The Last of Us", rating.imdb=8.8
+  [#5] title="Stranger Things", rating.imdb=8.7
+  --- 3 document(s)
+doclite> doclite> doclite>   [#5] title="Stranger Things", production.budget_per_episode=30000000
+  --- 1 document(s)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston"
+  [#2] name="Aaron Paul"
+  [#4] name="Jenna Ortega"
+  --- 3 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] title="Breaking Bad", tier="masterpiece"
+  [#2] title="The Last of Us", tier="excellent"
+  [#3] title="Wednesday", tier="excellent"
+  [#4] title="Lupin", tier="good"
+  [#5] title="Stranger Things", tier="excellent"
+  --- 5 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", budget_tier="standard"
+  [#2] title="The Last of Us", budget_tier="premium"
+  [#3] title="Wednesday", budget_tier="blockbuster"
+  [#4] title="Lupin", budget_tier="standard"
+  [#5] title="Stranger Things", budget_tier="blockbuster"
+  --- 5 document(s)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston", status="legendary"
+  [#2] name="Aaron Paul", status="decorated"
+  [#3] name="Pedro Pascal", status="awarded"
+  [#4] name="Jenna Ortega", status="rising star"
+  [#5] name="Omar Sy", status="rising star"
+  [#6] name="Millie Bobby Brown", status="rising star"
+  --- 6 document(s)
+doclite> doclite> doclite>   [#4] title="Lupin"
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#0] type="SELECT", collection="actors", estimated_rows=6, pages=1, scan="FULL SCAN", filter="WHERE", selectivity=0.33, estimated_after_filter=1, cache_hits=116, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] type="SELECT", collection="series", estimated_rows=5, pages=1, scan="FULL SCAN", filter="WHERE", selectivity=0.33, estimated_after_filter=1, cache_hits=117, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] type="SELECT", collection="series", estimated_rows=5, pages=1, scan="FULL SCAN", filter="WHERE", selectivity=0.33, estimated_after_filter=1, join_1="HASH JOIN INNER reviews r", join_1_cost="13 (O(n+m))", join_1_right_rows=8, join_1_estimated_output=8, cache_hits=119, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] type="SELECT", collection="series", estimated_rows=5, pages=1, scan="FULL SCAN", filter="WHERE", selectivity=0.33, estimated_after_filter=1, hint_1="FORCE_INDEX(rating.imdb)", cache_hits=120, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] type="SELECT", collection="actors", estimated_rows=6, pages=1, scan="FULL SCAN", filter="WHERE", selectivity=0.33, estimated_after_filter=1, hint_1="FULL_SCAN", cache_hits=121, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite>   [#0] type="SELECT", collection="series", estimated_rows=5, pages=1, scan="FULL SCAN", join_1="HASH JOIN INNER reviews r", join_1_cost="13 (O(n+m))", join_1_right_rows=8, join_1_estimated_output=8, hint_1="HASH_JOIN", cache_hits=123, cache_misses=0
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston", awards.total=6
+  --- 1 document(s)
+doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.6
+  --- 1 document(s)
+doclite> doclite> doclite>   OK ÔÇö 2 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#1] series_title="Breaking Bad", reviewer="John", score=10, detail={story=10, acting=10, visuals=10}
+  [#2] series_title="Breaking Bad", reviewer="Alice", score=9, detail={story=9, acting=10, visuals=10}
+  --- 2 document(s)
+doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#6] name="Millie Bobby Brown", contact.agent.phone="+1-555-0200"
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#1] series_title="Breaking Bad", reviewer="John", score=10, detail={story=10, acting=10, visuals=10}
+  [#2] series_title="Breaking Bad", reviewer="Alice", score=9, detail={story=9, acting=10, visuals=10}
+  [#3] series_title="The Last of Us", reviewer="John", score=8, detail={story=9, acting=8, visuals=10}
+  [#4] series_title="The Last of Us", reviewer="Bob", score=9, detail={story=9, acting=9, visuals=10}
+  [#6] series_title="Lupin", reviewer="Alice", score=8, detail={story=8, acting=9, visuals=7}
+  [#7] series_title="Stranger Things", reviewer="Bob", score=8, detail={story=8, acting=7, visuals=9}
+  [#8] series_title="Stranger Things", reviewer="John", score=9, detail={story=9, acting=8, visuals=9}
+  --- 7 document(s)
+doclite> doclite> doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s), dernier ID : 6
+doclite> doclite>   OK ÔÇö 1 ligne(s) affect├®e(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", rating.imdb=9.6
+  [#2] title="The Last of Us", rating.imdb=8.8
+  [#3] title="Wednesday", rating.imdb=8.1
+  [#4] title="Lupin", rating.imdb=7.5
+  [#5] title="Stranger Things", rating.imdb=8.7
+  --- 5 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] name="Bryan Cranston"
+  --- 1 document(s)
+doclite> doclite> doclite>   [#1] name="Bryan Cranston"
+  --- 1 document(s)
+doclite> doclite> doclite>   [#1] series_title="Breaking Bad", reviewer="John"
+  [#2] series_title="Breaking Bad", reviewer="Alice"
+  [#3] series_title="The Last of Us", reviewer="John"
+  [#4] series_title="The Last of Us", reviewer="Bob"
+  --- 4 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#1] production.country="USA"
+  [#4] production.country="France"
+  --- 2 document(s)
+doclite> doclite> doclite>   [#0] COUNT=2
+  --- 1 document(s)
+doclite> doclite> doclite>   [#1] detail.acting=10
+  [#4] detail.acting=9
+  [#3] detail.acting=8
+  [#7] detail.acting=7
+  --- 4 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   [#6] name="Millie Bobby Brown", contact.agent.name="WME"
+  --- 1 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite> doclite>   Erreur : doclite: parse error: parser: expected token 2, got 37 ("avg") at pos 140
+doclite> doclite> doclite>   [#1] title="Breaking Bad", vs_avg="above average"
+  [#2] title="The Last of Us", vs_avg="above average"
+  [#3] title="Wednesday", vs_avg="below average"
+  [#4] title="Lupin", vs_avg="below average"
+  [#5] title="Stranger Things", vs_avg="above average"
+  --- 5 document(s)
+doclite> doclite> doclite>   [#1] title="Breaking Bad", total_budget=15000000
+  [#2] title="The Last of Us", total_budget=20000000
+  [#3] title="Wednesday", total_budget=24000000
+  [#4] title="Lupin", total_budget=15000000
+  [#5] title="Stranger Things", total_budget=120000000
+  --- 5 document(s)
+doclite> doclite> doclite>   [#2] series_title="Breaking Bad", reviewer="Alice"
+  [#6] series_title="Lupin", reviewer="Alice"
+  --- 2 document(s)
+doclite> doclite> doclite> doclite> doclite> doclite>   actors (6 document(s))
+    Ôö£ÔöÇ country                   string (6/6 = 100%)
+    Ôö£ÔöÇ awards.emmys              int64 (6/6 = 100%)
+    Ôö£ÔöÇ awards.total              int64 (6/6 = 100%)
+    Ôö£ÔöÇ awards.cesar              int64 (1/6 = 17%)
+    Ôö£ÔöÇ contact.agent.name        string (1/6 = 17%)
+    Ôö£ÔöÇ contact.social.instagram  string (1/6 = 17%)
+    Ôö£ÔöÇ name                      string (6/6 = 100%)
+    Ôö£ÔöÇ age                       int64 (6/6 = 100%)
+    Ôö£ÔöÇ awards.golden_globes      int64 (6/6 = 100%)
+    Ôö£ÔöÇ contact.agent.phone       string (1/6 = 17%)
+
+  series (5 document(s))
+    Ôö£ÔöÇ title                     string (5/5 = 100%)
+    Ôö£ÔöÇ genre                     unknown (5/5 = 100%)
+    Ôö£ÔöÇ rating.imdb               float64 (5/5 = 100%)
+    Ôö£ÔöÇ rating.rotten_tomatoes    int64 (5/5 = 100%)
+    Ôö£ÔöÇ production.company        string (5/5 = 100%)
+    Ôö£ÔöÇ production.country        string (5/5 = 100%)
+    Ôö£ÔöÇ production.budget_per_episode int64 (5/5 = 100%)
+    Ôö£ÔöÇ year                      int64 (5/5 = 100%)
+    Ôö£ÔöÇ seasons                   int64 (5/5 = 100%)
+    Ôö£ÔöÇ network                   string (5/5 = 100%)
+    Ôö£ÔöÇ creator                   string (5/5 = 100%)
+    Ôö£ÔöÇ status                    string (5/5 = 100%)
+    Ôö£ÔöÇ cast                      unknown (5/5 = 100%)
+
+  reviews (7 document(s))
+    Ôö£ÔöÇ detail.story              int64 (7/7 = 100%)
+    Ôö£ÔöÇ detail.acting             int64 (7/7 = 100%)
+    Ôö£ÔöÇ detail.visuals            int64 (7/7 = 100%)
+    Ôö£ÔöÇ series_title              string (7/7 = 100%)
+    Ôö£ÔöÇ reviewer                  string (7/7 = 100%)
+    Ôö£ÔöÇ score                     int64 (7/7 = 100%)
+doclite> doclite>   actors (awards.total)
+  series (rating.imdb)
+  series (production.country)
+doclite> doclite>   LRU Page Cache:
+    Capacity : 1024 pages (4096 KB)
+    Size     : 6 pages
+    Hits     : 165
+    Misses   : 0
+    Hit rate : 100.0%
+doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> doclite> 

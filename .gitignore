@@ -1,0 +1,45 @@
+# Binaires Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Exception : garder la DLL des drivers
+!drivers/c/doclite.dll
+!drivers/python/doclite.dll
+!drivers/node/doclite.dll
+!drivers/java/doclite.dll
+
+# Fichiers de test
+*.test
+*.out
+*.prof
+code_py_test.py
+test_large.json
+
+# Fichiers de base DocLite
+*.dlite
+*.db
+*.wal
+
+# Exceptions : bases de test officielles
+!test.dlite
+!test.dlite.wal
+!series.dlite
+!series.dlite.wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+lumen/node_modules/
+lumen/dist/

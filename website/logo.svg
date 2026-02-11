@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect x="10" y="10" width="180" height="180" rx="40" fill="#12121a"/>
+  <rect x="10" y="10" width="180" height="180" rx="40" stroke="url(#g2)" stroke-width="2" fill="none" opacity="0.4"/>
+  <!-- Document shape -->
+  <path d="M60 45 L120 45 L145 70 L145 155 L60 155 Z" fill="url(#g1)" opacity="0.15" stroke="url(#g1)" stroke-width="2"/>
+  <!-- Fold corner -->
+  <path d="M120 45 L120 70 L145 70" fill="none" stroke="url(#g1)" stroke-width="2"/>
+  <!-- Data lines (representing JSON/SQL) -->
+  <rect x="76" y="85" width="50" height="4" rx="2" fill="#818cf8" opacity="0.9"/>
+  <rect x="76" y="97" width="38" height="4" rx="2" fill="#06b6d4" opacity="0.7"/>
+  <rect x="76" y="109" width="45" height="4" rx="2" fill="#818cf8" opacity="0.5"/>
+  <rect x="76" y="121" width="32" height="4" rx="2" fill="#06b6d4" opacity="0.4"/>
+  <!-- Diamond accent (brand mark) -->
+  <path d="M100 52 L108 62 L100 72 L92 62 Z" fill="url(#g2)"/>
+</svg>
