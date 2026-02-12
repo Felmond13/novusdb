@@ -24,6 +24,7 @@ type CollectionMeta struct {
 	Name         string
 	FirstPageID  uint32
 	NextRecordID uint64
+	LastPageID   uint32 // cache en mémoire : dernière page de la chaîne (0 = inconnu)
 }
 
 // Pager gère l'accès au fichier paginé unique.
@@ -689,33 +690,25 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 		return p.insertOverflowRecord(coll, recordID, data)
 	}
 
-	pageID := coll.FirstPageID
-	var lastPageID uint32
+	// Résoudre la dernière page (cache ou walk unique)
+	lastPageID := p.resolveLastPage(coll)
 
-	for pageID != 0 {
-		page, err := p.readPageUnlocked(pageID)
-		if err != nil {
-			return err
-		}
-		if page.AppendRecordWithFlag(recordID, storeData, storeFlag) {
-			return p.writePageUnlocked(page)
-		}
-		lastPageID = pageID
-		pageID = page.NextPageID()
+	// Essayer d'insérer dans la dernière page (O(1))
+	page, err := p.readPageUnlocked(lastPageID)
+	if err != nil {
+		return err
+	}
+	if page.AppendRecordWithFlag(recordID, storeData, storeFlag) {
+		return p.writePageUnlocked(page)
 	}
 
-	// Aucune page n'a assez d'espace : allouer et chaîner
+	// Dernière page pleine : allouer et chaîner
 	newID, err := p.allocatePageUnlocked(PageTypeData)
 	if err != nil {
 		return err
 	}
-
-	prev, err := p.readPageUnlocked(lastPageID)
-	if err != nil {
-		return err
-	}
-	prev.SetNextPageID(newID)
-	if err := p.writePageUnlocked(prev); err != nil {
+	page.SetNextPageID(newID)
+	if err := p.writePageUnlocked(page); err != nil {
 		return err
 	}
 
@@ -726,7 +719,32 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 	if !newPage.AppendRecordWithFlag(recordID, storeData, storeFlag) {
 		return fmt.Errorf("pager: record too large for a single page")
 	}
+	coll.LastPageID = newID // mettre à jour le cache
 	return p.writePageUnlocked(newPage)
+}
+
+// resolveLastPage retourne le LastPageID de la collection.
+// Si inconnu (0), parcourt la chaîne une seule fois et cache le résultat.
+func (p *Pager) resolveLastPage(coll *CollectionMeta) uint32 {
+	if coll.LastPageID != 0 {
+		return coll.LastPageID
+	}
+	// Walk unique : trouver la dernière page
+	pid := coll.FirstPageID
+	for pid != 0 {
+		page, err := p.readPageUnlocked(pid)
+		if err != nil {
+			break
+		}
+		next := page.NextPageID()
+		if next == 0 {
+			coll.LastPageID = pid
+			return pid
+		}
+		pid = next
+	}
+	coll.LastPageID = coll.FirstPageID
+	return coll.FirstPageID
 }
 
 // insertOverflowRecord stocke un gros record dans des overflow pages chaînées,
@@ -1226,6 +1244,7 @@ func (p *Pager) VacuumCollection(collName string) (int, error) {
 
 	// Mettre à jour la collection pour pointer vers la nouvelle chaîne
 	coll.FirstPageID = newFirstPageID
+	coll.LastPageID = 0 // invalider le cache (sera recalculé au prochain insert)
 
 	// Marquer les anciennes pages comme libres (on ne les libère pas physiquement pour v1)
 	if err := p.flushMeta(); err != nil {
