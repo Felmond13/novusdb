@@ -152,6 +152,8 @@ func (p *Parser) Parse() (Statement, error) {
 		return p.parseExplain()
 	case TokenTruncate:
 		return p.parseTruncate()
+	case TokenAnalyze:
+		return p.parseAnalyze()
 	default:
 		return nil, fmt.Errorf("parser: unexpected token %q at pos %d", p.current.Literal, p.current.Pos)
 	}
@@ -958,6 +960,23 @@ func (p *Parser) parseTruncate() (*TruncateTableStatement, error) {
 		return nil, err
 	}
 	return &TruncateTableStatement{Table: tableTok.Literal}, nil
+}
+
+// ---------- ANALYZE ----------
+
+func (p *Parser) parseAnalyze() (*AnalyzeStatement, error) {
+	p.advance() // skip ANALYZE
+	stmt := &AnalyzeStatement{}
+	// TABLE est optionnel
+	if p.current.Type == TokenTable {
+		p.advance()
+	}
+	// Nom de table optionnel (si absent → toutes les collections)
+	if p.current.Type == TokenIdent {
+		stmt.Table = p.current.Literal
+		p.advance()
+	}
+	return stmt, nil
 }
 
 // parseExpr analyse une expression avec priorité (OR < AND < comparaison).

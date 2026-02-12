@@ -38,10 +38,11 @@ type Sequence struct {
 
 // Executor orchestre l'exécution des requêtes sur le stockage.
 type Executor struct {
-	pager    *storage.Pager
-	lockMgr  *concurrency.LockManager
-	indexMgr *index.Manager
-	seqs     map[string]*Sequence
+	pager      *storage.Pager
+	lockMgr    *concurrency.LockManager
+	indexMgr   *index.Manager
+	seqs       map[string]*Sequence
+	statsCache map[string]*TableStats // stats ANALYZE en cache
 }
 
 // NewExecutor crée un nouvel exécuteur.
@@ -90,6 +91,8 @@ func (ex *Executor) Execute(stmt parser.Statement) (*Result, error) {
 		return ex.execCreateSequence(s)
 	case *parser.DropSequenceStatement:
 		return ex.execDropSequence(s)
+	case *parser.AnalyzeStatement:
+		return ex.execAnalyze(s)
 	default:
 		return nil, fmt.Errorf("executor: unsupported statement type %T", stmt)
 	}

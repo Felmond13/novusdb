@@ -44,6 +44,9 @@ func Open(path string) (*DB, error) {
 	// Ouvrir les B-Trees persistés (pas de rebuild — lecture directe depuis le disque)
 	db.openPersistentIndexes()
 
+	// Charger les stats ANALYZE persistées
+	executor.LoadStats()
+
 	return db, nil
 }
 
@@ -66,6 +69,7 @@ func OpenReadOnly(path string) (*DB, error) {
 		indexMgr: indexMgr,
 	}
 	db.openPersistentIndexes()
+	executor.LoadStats()
 	return db, nil
 }
 

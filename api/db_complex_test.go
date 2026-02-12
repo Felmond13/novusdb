@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -1094,4 +1095,171 @@ func TestIndexIfNotExists(t *testing.T) {
 	mustExec(t, db, `CREATE INDEX idx_sal ON employees(salary)`)
 	// Should not error — named index: IF NOT EXISTS goes after the name
 	mustExec(t, db, `CREATE INDEX idx_sal2 IF NOT EXISTS ON employees(salary)`)
+}
+
+// =====================================================
+// ANALYZE tests
+// =====================================================
+
+func TestAnalyzeBasic(t *testing.T) {
+	db := setupComplexDB(t)
+
+	// ANALYZE should not error
+	res, err := db.Exec("ANALYZE")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should have analyzed employees, departments, projects, items, kv (5 tables from setupComplexDB)
+	if res.RowsAffected < 1 {
+		t.Errorf("expected at least 1 table analyzed, got %d", res.RowsAffected)
+	}
+}
+
+func TestAnalyzeSingleTable(t *testing.T) {
+	db := setupComplexDB(t)
+
+	res, err := db.Exec("ANALYZE employees")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsAffected != 1 {
+		t.Errorf("expected 1 table analyzed, got %d", res.RowsAffected)
+	}
+}
+
+func TestAnalyzeColumnStats(t *testing.T) {
+	db := setupComplexDB(t)
+
+	mustExec(t, db, "ANALYZE employees")
+
+	// Verify stats via EXPLAIN — should show "ANALYZED" instead of "HEURISTIC"
+	rows := mustQuery(t, db, `EXPLAIN SELECT * FROM employees WHERE salary > 70000`)
+	if len(rows) == 0 {
+		t.Fatal("EXPLAIN returned no rows")
+	}
+
+	// Check that stats are ANALYZED
+	if v, ok := rows[0]["stats"]; ok {
+		if v != "ANALYZED" {
+			t.Errorf("expected stats=ANALYZED, got %v", v)
+		}
+	}
+
+	// Selectivity should be data-driven now, not 0.33
+	if v, ok := rows[0]["selectivity"]; ok {
+		sel, ok2 := toF64(v)
+		if ok2 && sel == 0.33 {
+			t.Errorf("selectivity should be data-driven after ANALYZE, got default 0.33")
+		}
+	}
+}
+
+func TestAnalyzeExplainSelectivity(t *testing.T) {
+	path := tempDBPath(t)
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	// Insert 100 rows with salary from 1 to 100
+	for i := 1; i <= 100; i++ {
+		mustExec(t, db, fmt.Sprintf(`INSERT INTO bigtest VALUES {"id": %d, "salary": %d, "dept": "D%d"}`, i, i*1000, i%5))
+	}
+
+	mustExec(t, db, "ANALYZE bigtest")
+
+	// salary > 50000 should match ~50 out of 100 rows
+	rows := mustQuery(t, db, `EXPLAIN SELECT * FROM bigtest WHERE salary > 50000`)
+	if len(rows) == 0 {
+		t.Fatal("EXPLAIN returned no rows")
+	}
+
+	if v, ok := rows[0]["selectivity"]; ok {
+		sel, ok2 := toF64(v)
+		if !ok2 {
+			t.Fatalf("selectivity not a number: %v", v)
+		}
+		// Should be around 0.5 (±0.2), not the default 0.33
+		if sel < 0.2 || sel > 0.8 {
+			t.Errorf("expected selectivity ~0.5 for salary>50000 on 1-100k range, got %.3f", sel)
+		}
+	}
+
+	// dept = "D0" should match ~20 out of 100 rows (NDV=5 → 1/5=0.2)
+	rows2 := mustQuery(t, db, `EXPLAIN SELECT * FROM bigtest WHERE dept = "D0"`)
+	if len(rows2) == 0 {
+		t.Fatal("EXPLAIN returned no rows")
+	}
+
+	if v, ok := rows2[0]["selectivity"]; ok {
+		sel, ok2 := toF64(v)
+		if !ok2 {
+			t.Fatalf("selectivity not a number: %v", v)
+		}
+		// NDV=5, so selectivity should be 1/5 = 0.2
+		if sel < 0.1 || sel > 0.35 {
+			t.Errorf("expected selectivity ~0.2 for dept=D0 with NDV=5, got %.3f", sel)
+		}
+	}
+}
+
+func TestAnalyzePersistence(t *testing.T) {
+	path := tempDBPath(t)
+
+	// Open, insert, analyze, close
+	func() {
+		db, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+
+		for i := 1; i <= 20; i++ {
+			mustExec(t, db, fmt.Sprintf(`INSERT INTO persist_test VALUES {"id": %d, "val": %d}`, i, i*10))
+		}
+		mustExec(t, db, "ANALYZE persist_test")
+	}()
+
+	// Reopen — stats should be loaded from _novusdb_stats
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	rows := mustQuery(t, db, `EXPLAIN SELECT * FROM persist_test WHERE val > 100`)
+	if len(rows) == 0 {
+		t.Fatal("EXPLAIN returned no rows")
+	}
+
+	if v, ok := rows[0]["stats"]; ok {
+		if v != "ANALYZED" {
+			t.Errorf("expected stats=ANALYZED after reopen, got %v", v)
+		}
+	}
+}
+
+func TestAnalyzeReAnalyze(t *testing.T) {
+	db := setupComplexDB(t)
+
+	// First ANALYZE
+	mustExec(t, db, "ANALYZE employees")
+
+	// Add more data
+	mustExec(t, db, `INSERT INTO employees VALUES {"name": "Grace", "salary": 120000, "department": "Engineering", "active": true}`)
+
+	// Re-ANALYZE should update stats
+	mustExec(t, db, "ANALYZE employees")
+
+	// EXPLAIN should still show ANALYZED
+	rows := mustQuery(t, db, `EXPLAIN SELECT * FROM employees WHERE salary > 100000`)
+	if len(rows) == 0 {
+		t.Fatal("EXPLAIN returned no rows")
+	}
+	if v, ok := rows[0]["stats"]; ok {
+		if v != "ANALYZED" {
+			t.Errorf("expected ANALYZED after re-analyze, got %v", v)
+		}
+	}
 }

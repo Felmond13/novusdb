@@ -72,6 +72,7 @@ const (
 	TokenEnd      // END
 	TokenView     // VIEW
 	TokenSequence // SEQUENCE
+	TokenAnalyze  // ANALYZE
 	TokenHint     // /*+ ... */ (Oracle-style hint)
 
 	// Opérateurs et ponctuation
@@ -162,6 +163,7 @@ var keywords = map[string]TokenType{
 	"end":      TokenEnd,
 	"view":     TokenView,
 	"sequence": TokenSequence,
+	"analyze":  TokenAnalyze,
 }
 
 // LookupIdent retourne le TokenType d'un identifiant (mot-clé ou ident).

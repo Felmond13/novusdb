@@ -343,6 +343,14 @@ type SysdateExpr struct {
 
 func (e *SysdateExpr) exprNode() {}
 
+// AnalyzeStatement représente ANALYZE [table].
+// Si Table est vide, toutes les collections sont analysées.
+type AnalyzeStatement struct {
+	Table string // nom de la collection (vide = toutes)
+}
+
+func (s *AnalyzeStatement) statementNode() {}
+
 // ExplainStatement encapsule un statement pour afficher son plan d'exécution.
 type ExplainStatement struct {
 	Inner Statement
