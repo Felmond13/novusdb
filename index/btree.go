@@ -24,10 +24,12 @@ const (
 	maxInternalPayload = storage.PageSize - internalDataOff // 4077
 )
 
-// btreeEntry est une paire (clé, recordID) stockée dans une feuille.
+// btreeEntry est une paire (clé, recordID, localisation) stockée dans une feuille.
 type btreeEntry struct {
 	Key      string
 	RecordID uint64
+	PageID   uint32 // page de données contenant le record
+	SlotOff  uint16 // offset du slot dans la page
 }
 
 // internalNode représente un nœud interne chargé en mémoire.
@@ -78,14 +80,18 @@ func readLeafEntries(page *storage.Page) []btreeEntry {
 		}
 		kl := binary.LittleEndian.Uint16(page.Data[off:])
 		off += 2
-		if int(off)+int(kl)+8 > storage.PageSize {
+		if int(off)+int(kl)+14 > storage.PageSize {
 			break
 		}
 		key := string(page.Data[off : off+kl])
 		off += kl
 		rid := binary.LittleEndian.Uint64(page.Data[off:])
 		off += 8
-		entries = append(entries, btreeEntry{Key: key, RecordID: rid})
+		pid := binary.LittleEndian.Uint32(page.Data[off:])
+		off += 4
+		soff := binary.LittleEndian.Uint16(page.Data[off:])
+		off += 2
+		entries = append(entries, btreeEntry{Key: key, RecordID: rid, PageID: pid, SlotOff: soff})
 	}
 	return entries
 }
@@ -107,6 +113,10 @@ func writeLeafNode(page *storage.Page, entries []btreeEntry, nextLeaf uint32) {
 		off += uint16(len(kb))
 		binary.LittleEndian.PutUint64(page.Data[off:], e.RecordID)
 		off += 8
+		binary.LittleEndian.PutUint32(page.Data[off:], e.PageID)
+		off += 4
+		binary.LittleEndian.PutUint16(page.Data[off:], e.SlotOff)
+		off += 2
 	}
 }
 
@@ -155,7 +165,7 @@ func writeInternalNode(page *storage.Page, node internalNode) {
 func leafEntriesSize(entries []btreeEntry) int {
 	s := 0
 	for _, e := range entries {
-		s += 2 + len(e.Key) + 8
+		s += 2 + len(e.Key) + 8 + 4 + 2 // keyLen + key + recordID + pageID + slotOff
 	}
 	return s
 }
@@ -205,18 +215,53 @@ func (bt *BTree) findLeftmostLeaf() (*storage.Page, error) {
 
 // -------- Lookup --------
 
-// Lookup retourne tous les recordIDs associés à la clé.
-func (bt *BTree) Lookup(key string) ([]uint64, error) {
+// Lookup retourne tous les entrées associées à la clé (avec localisation).
+func (bt *BTree) Lookup(key string) ([]btreeEntry, error) {
 	page, err := bt.findLeaf(key)
 	if err != nil {
 		return nil, err
 	}
-	var result []uint64
+	var result []btreeEntry
 	for {
 		entries := readLeafEntries(page)
 		for _, e := range entries {
 			if e.Key == key {
-				result = append(result, e.RecordID)
+				result = append(result, e)
+			} else if e.Key > key {
+				return result, nil
+			}
+		}
+		next := readLeafNext(page)
+		if next == 0 {
+			break
+		}
+		page, err = bt.pager.ReadPage(next)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// LookupLimit retourne au plus 'limit' entrées associées à la clé.
+// Si limit <= 0, retourne toutes les entrées (comme Lookup).
+func (bt *BTree) LookupLimit(key string, limit int) ([]btreeEntry, error) {
+	if limit <= 0 {
+		return bt.Lookup(key)
+	}
+	page, err := bt.findLeaf(key)
+	if err != nil {
+		return nil, err
+	}
+	var result []btreeEntry
+	for {
+		entries := readLeafEntries(page)
+		for _, e := range entries {
+			if e.Key == key {
+				result = append(result, e)
+				if len(result) >= limit {
+					return result, nil
+				}
 			} else if e.Key > key {
 				return result, nil
 			}
@@ -235,8 +280,8 @@ func (bt *BTree) Lookup(key string) ([]uint64, error) {
 
 // -------- RangeScan --------
 
-// RangeScan retourne les recordIDs dont la clé est dans [minKey, maxKey].
-func (bt *BTree) RangeScan(minKey, maxKey string) ([]uint64, error) {
+// RangeScan retourne les entrées dont la clé est dans [minKey, maxKey].
+func (bt *BTree) RangeScan(minKey, maxKey string) ([]btreeEntry, error) {
 	var page *storage.Page
 	var err error
 	if minKey != "" {
@@ -247,7 +292,7 @@ func (bt *BTree) RangeScan(minKey, maxKey string) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	var result []uint64
+	var result []btreeEntry
 	for {
 		entries := readLeafEntries(page)
 		for _, e := range entries {
@@ -257,7 +302,7 @@ func (bt *BTree) RangeScan(minKey, maxKey string) ([]uint64, error) {
 			if maxKey != "" && e.Key > maxKey {
 				return result, nil
 			}
-			result = append(result, e.RecordID)
+			result = append(result, e)
 		}
 		next := readLeafNext(page)
 		if next == 0 {
@@ -278,9 +323,9 @@ type splitResult struct {
 	newPageID uint32
 }
 
-// Insert ajoute une entrée (key, recordID) dans le B-Tree.
-func (bt *BTree) Insert(key string, recordID uint64) error {
-	split, err := bt.insertRecursive(bt.RootPageID, key, recordID)
+// Insert ajoute une entrée (key, recordID, localisation) dans le B-Tree.
+func (bt *BTree) Insert(key string, recordID uint64, dataPageID uint32, slotOff uint16) error {
+	split, err := bt.insertRecursive(bt.RootPageID, key, recordID, dataPageID, slotOff)
 	if err != nil {
 		return err
 	}
@@ -305,19 +350,19 @@ func (bt *BTree) Insert(key string, recordID uint64) error {
 	return nil
 }
 
-func (bt *BTree) insertRecursive(pageID uint32, key string, recordID uint64) (*splitResult, error) {
+func (bt *BTree) insertRecursive(pageID uint32, key string, recordID uint64, dataPageID uint32, slotOff uint16) (*splitResult, error) {
 	page, err := bt.pager.ReadPage(pageID)
 	if err != nil {
 		return nil, err
 	}
 	if page.Data[btreeNodeTypeOff] == nodeTypeLeaf {
-		return bt.insertIntoLeaf(page, key, recordID)
+		return bt.insertIntoLeaf(page, key, recordID, dataPageID, slotOff)
 	}
 	node := readInternalNode(page)
 	childIdx := sort.Search(len(node.keys), func(i int) bool {
 		return node.keys[i] > key
 	})
-	childSplit, err := bt.insertRecursive(node.children[childIdx], key, recordID)
+	childSplit, err := bt.insertRecursive(node.children[childIdx], key, recordID, dataPageID, slotOff)
 	if err != nil {
 		return nil, err
 	}
@@ -327,11 +372,11 @@ func (bt *BTree) insertRecursive(pageID uint32, key string, recordID uint64) (*s
 	return bt.insertIntoInternal(page, node, childIdx, childSplit)
 }
 
-func (bt *BTree) insertIntoLeaf(page *storage.Page, key string, recordID uint64) (*splitResult, error) {
+func (bt *BTree) insertIntoLeaf(page *storage.Page, key string, recordID uint64, dataPageID uint32, slotOff uint16) (*splitResult, error) {
 	entries := readLeafEntries(page)
 	nextLeaf := readLeafNext(page)
 
-	entry := btreeEntry{Key: key, RecordID: recordID}
+	entry := btreeEntry{Key: key, RecordID: recordID, PageID: dataPageID, SlotOff: slotOff}
 	pos := sort.Search(len(entries), func(i int) bool {
 		if entries[i].Key == key {
 			return entries[i].RecordID >= recordID
@@ -437,6 +482,139 @@ func (bt *BTree) insertIntoInternal(page *storage.Page, node internalNode, child
 		key:       pushUpKey,
 		newPageID: newPageID,
 	}, nil
+}
+
+// -------- BulkLoad --------
+
+// BulkLoad construit le B-Tree à partir d'un slice d'entrées DÉJÀ TRIÉES par key.
+// Beaucoup plus rapide que N appels à Insert : O(N) au lieu de O(N log N).
+func (bt *BTree) BulkLoad(entries []btreeEntry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// 1) Créer les feuilles séquentiellement
+	type leafInfo struct {
+		pageID   uint32
+		firstKey string
+	}
+	var leaves []leafInfo
+	var currentEntries []btreeEntry
+
+	flushLeaf := func(nextLeaf uint32) error {
+		if len(currentEntries) == 0 {
+			return nil
+		}
+		pageID, err := bt.pager.AllocatePage(storage.PageTypeIndex)
+		if err != nil {
+			return err
+		}
+		page, err := bt.pager.ReadPage(pageID)
+		if err != nil {
+			return err
+		}
+		writeLeafNode(page, currentEntries, nextLeaf)
+		if err := bt.pager.WritePage(page); err != nil {
+			return err
+		}
+		leaves = append(leaves, leafInfo{pageID: pageID, firstKey: currentEntries[0].Key})
+		return nil
+	}
+
+	// Remplir les feuilles (target ~75% du payload max pour laisser de la place aux insertions futures)
+	targetPayload := maxLeafPayload * 3 / 4
+	currentSize := 0
+
+	for i := range entries {
+		entrySize := 2 + len(entries[i].Key) + 8 + 4 + 2
+		if currentSize+entrySize > targetPayload && len(currentEntries) > 0 {
+			// Feuille pleine → flush (nextLeaf sera patché après)
+			if err := flushLeaf(0); err != nil {
+				return err
+			}
+			currentEntries = nil
+			currentSize = 0
+		}
+		currentEntries = append(currentEntries, entries[i])
+		currentSize += entrySize
+	}
+	// Flush la dernière feuille
+	if err := flushLeaf(0); err != nil {
+		return err
+	}
+
+	// 2) Chaîner les feuilles (nextLeaf pointers) — en ordre inverse
+	for i := len(leaves) - 2; i >= 0; i-- {
+		page, err := bt.pager.ReadPage(leaves[i].pageID)
+		if err != nil {
+			return err
+		}
+		binary.LittleEndian.PutUint32(page.Data[btreeNextLeafOff:], leaves[i+1].pageID)
+		if err := bt.pager.WritePage(page); err != nil {
+			return err
+		}
+	}
+
+	// 3) Construire les nœuds internes bottom-up
+	if len(leaves) == 1 {
+		bt.RootPageID = leaves[0].pageID
+		return nil
+	}
+
+	// Niveau courant = les pageIDs des feuilles
+	type childEntry struct {
+		pageID uint32
+		key    string // clé de séparation (première clé de ce child, sauf child[0])
+	}
+	level := make([]childEntry, len(leaves))
+	for i, l := range leaves {
+		level[i] = childEntry{pageID: l.pageID, key: l.firstKey}
+	}
+
+	for len(level) > 1 {
+		var nextLevel []childEntry
+		i := 0
+		for i < len(level) {
+			// Combien d'enfants peut contenir un nœud interne ?
+			// Chaque clé coûte 2 + len(key) + 4 bytes, plus 4 bytes pour child0
+			node := internalNode{
+				children: []uint32{level[i].pageID},
+			}
+			i++
+			for i < len(level) {
+				keyCost := 2 + len(level[i].key) + 4
+				if internalNodeSize(node)+keyCost > maxInternalPayload {
+					break
+				}
+				node.keys = append(node.keys, level[i].key)
+				node.children = append(node.children, level[i].pageID)
+				i++
+			}
+
+			pageID, err := bt.pager.AllocatePage(storage.PageTypeIndex)
+			if err != nil {
+				return err
+			}
+			page, err := bt.pager.ReadPage(pageID)
+			if err != nil {
+				return err
+			}
+			writeInternalNode(page, node)
+			if err := bt.pager.WritePage(page); err != nil {
+				return err
+			}
+
+			firstKey := ""
+			if len(node.keys) > 0 {
+				firstKey = node.keys[0]
+			}
+			nextLevel = append(nextLevel, childEntry{pageID: pageID, key: firstKey})
+		}
+		level = nextLevel
+	}
+
+	bt.RootPageID = level[0].pageID
+	return nil
 }
 
 // -------- Remove --------

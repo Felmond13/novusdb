@@ -123,7 +123,7 @@ func (ex *Executor) buildExplainPlan(s *parser.SelectStatement) *storage.Documen
 	doc.Set("pages", stats.PageCount)
 
 	// Scan strategy
-	candidateIDs := ex.resolveIndexLookup(s.From, s.Where)
+	candidateIDs := ex.resolveIndexLookup(s.From, s.Where, -1)
 	if candidateIDs != nil {
 		doc.Set("scan", "INDEX LOOKUP")
 		doc.Set("index_matches", int64(len(candidateIDs)))

@@ -220,6 +220,34 @@ func (p *Page) ReadRecords() []RecordSlot {
 	return slots
 }
 
+// ReadRecordAt lit un seul record à l'offset donné (accès direct O(1)).
+// Retourne le slot et true si l'offset est valide, false sinon.
+func (p *Page) ReadRecordAt(slotOffset uint16) (RecordSlot, bool) {
+	end := p.FreeSpaceOffset()
+	if slotOffset < PageHeaderSize || slotOffset+RecordSlotHeaderSize > end {
+		return RecordSlot{}, false
+	}
+	rid := binary.LittleEndian.Uint64(p.Data[slotOffset:])
+	dlen := binary.LittleEndian.Uint16(p.Data[slotOffset+8:])
+	flags := p.Data[slotOffset+10]
+
+	dataStart := slotOffset + RecordSlotHeaderSize
+	if int(dataStart)+int(dlen) > PageSize {
+		return RecordSlot{}, false
+	}
+	dataCopy := make([]byte, dlen)
+	copy(dataCopy, p.Data[dataStart:dataStart+dlen])
+
+	return RecordSlot{
+		RecordID:   rid,
+		Data:       dataCopy,
+		Deleted:    flags == SlotFlagDeleted || flags == SlotFlagDelOver,
+		Overflow:   flags == SlotFlagOverflow || flags == SlotFlagCompOverflow,
+		Compressed: flags == SlotFlagCompressed || flags == SlotFlagCompOverflow,
+		Offset:     slotOffset,
+	}, true
+}
+
 // MarkDeleted marque un record comme supprimé à l'offset donné.
 // Préserve le flag overflow pour permettre la libération des overflow pages.
 func (p *Page) MarkDeleted(slotOffset uint16) {

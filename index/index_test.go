@@ -28,9 +28,9 @@ func TestIndexAddLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new index: %v", err)
 	}
-	idx.Add("s:oracle", 1)
-	idx.Add("s:oracle", 4)
-	idx.Add("s:mysql", 2)
+	idx.Add("s:oracle", 1, 0, 0)
+	idx.Add("s:oracle", 4, 0, 0)
+	idx.Add("s:mysql", 2, 0, 0)
 
 	ids, _ := idx.Lookup("s:oracle")
 	if len(ids) != 2 {
@@ -49,12 +49,12 @@ func TestIndexAddLookup(t *testing.T) {
 func TestIndexRemove(t *testing.T) {
 	pager := tempPager(t)
 	idx, _ := NewIndex("jobs", "type", pager)
-	idx.Add("s:oracle", 1)
-	idx.Add("s:oracle", 4)
+	idx.Add("s:oracle", 1, 0, 0)
+	idx.Add("s:oracle", 4, 0, 0)
 
 	idx.Remove("s:oracle", 1)
 	ids, _ := idx.Lookup("s:oracle")
-	if len(ids) != 1 || ids[0] != 4 {
+	if len(ids) != 1 || ids[0].RecordID != 4 {
 		t.Errorf("expected [4], got %v", ids)
 	}
 
@@ -68,7 +68,7 @@ func TestIndexRemove(t *testing.T) {
 func TestIndexRemoveNonExistent(t *testing.T) {
 	pager := tempPager(t)
 	idx, _ := NewIndex("jobs", "type", pager)
-	idx.Add("s:oracle", 1)
+	idx.Add("s:oracle", 1, 0, 0)
 	// Ne doit pas paniquer
 	idx.Remove("s:oracle", 999)
 	idx.Remove("s:nonexistent", 1)
@@ -77,10 +77,10 @@ func TestIndexRemoveNonExistent(t *testing.T) {
 func TestIndexRangeScan(t *testing.T) {
 	pager := tempPager(t)
 	idx, _ := NewIndex("jobs", "priority", pager)
-	idx.Add("i:00000000000000000001", 10)
-	idx.Add("i:00000000000000000003", 30)
-	idx.Add("i:00000000000000000005", 50)
-	idx.Add("i:00000000000000000007", 70)
+	idx.Add("i:00000000000000000001", 10, 0, 0)
+	idx.Add("i:00000000000000000003", 30, 0, 0)
+	idx.Add("i:00000000000000000005", 50, 0, 0)
+	idx.Add("i:00000000000000000007", 70, 0, 0)
 
 	ids, _ := idx.RangeScan("i:00000000000000000002", "i:00000000000000000006")
 	if len(ids) != 2 {
@@ -103,8 +103,8 @@ func TestIndexRangeScan(t *testing.T) {
 func TestIndexAllEntries(t *testing.T) {
 	pager := tempPager(t)
 	idx, _ := NewIndex("jobs", "type", pager)
-	idx.Add("s:oracle", 1)
-	idx.Add("s:mysql", 2)
+	idx.Add("s:oracle", 1, 0, 0)
+	idx.Add("s:mysql", 2, 0, 0)
 
 	entries := idx.AllEntries()
 	if len(entries) != 2 {
@@ -211,9 +211,9 @@ func TestBTreePersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new index: %v", err)
 	}
-	idx.Add("s:oracle", 1)
-	idx.Add("s:mysql", 2)
-	idx.Add("s:oracle", 3)
+	idx.Add("s:oracle", 1, 0, 0)
+	idx.Add("s:mysql", 2, 0, 0)
+	idx.Add("s:oracle", 3, 0, 0)
 	rootID := idx.RootPageID()
 	pager.Close()
 
@@ -242,7 +242,7 @@ func TestBTreeSplitManyEntries(t *testing.T) {
 	// Insérer suffisamment d'entrées pour forcer au moins un split
 	for i := uint64(0); i < 200; i++ {
 		key := ValueToKey(int64(i))
-		if err := idx.Add(key, i); err != nil {
+		if err := idx.Add(key, i, 0, 0); err != nil {
 			t.Fatalf("add %d: %v", i, err)
 		}
 	}
@@ -254,7 +254,7 @@ func TestBTreeSplitManyEntries(t *testing.T) {
 		if err != nil {
 			t.Fatalf("lookup %d: %v", i, err)
 		}
-		if len(ids) != 1 || ids[0] != i {
+		if len(ids) != 1 || ids[0].RecordID != i {
 			t.Errorf("lookup(%d): expected [%d], got %v", i, i, ids)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 )
 
 // FieldType représente le type d'un champ dans un document.
@@ -68,15 +69,17 @@ func (d *Document) GetNested(path []string) (interface{}, bool) {
 	if len(path) == 1 {
 		return d.Get(path[0])
 	}
+	// Try nested path first (e.g. address → city)
 	val, ok := d.Get(path[0])
-	if !ok {
-		return nil, false
+	if ok {
+		sub, isSub := val.(*Document)
+		if isSub {
+			return sub.GetNested(path[1:])
+		}
 	}
-	sub, ok := val.(*Document)
-	if !ok {
-		return nil, false
-	}
-	return sub.GetNested(path[1:])
+	// Fallback: try flat dotted name (e.g. "e.department" from JOIN merge)
+	flat := strings.Join(path, ".")
+	return d.Get(flat)
 }
 
 // SetNested définit la valeur d'un champ imbriqué, créant les sous-documents si nécessaire.

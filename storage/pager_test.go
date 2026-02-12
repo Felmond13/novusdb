@@ -188,7 +188,7 @@ func TestPagerInsertRecordAtomic(t *testing.T) {
 	// Insérer plusieurs records
 	for i := uint64(1); i <= 10; i++ {
 		data := []byte{byte(i), 0, 0, 0}
-		if err := p.InsertRecordAtomic(coll, i, data); err != nil {
+		if _, _, err := p.InsertRecordAtomic(coll, i, data); err != nil {
 			t.Fatalf("insert %d: %v", i, err)
 		}
 	}
@@ -228,7 +228,7 @@ func TestPagerConcurrentInserts(t *testing.T) {
 				data := make([]byte, 50)
 				data[0] = byte(gid)
 				data[1] = byte(i)
-				if err := p.InsertRecordAtomic(coll, rid, data); err != nil {
+				if _, _, err := p.InsertRecordAtomic(coll, rid, data); err != nil {
 					errCh <- err
 					return
 				}

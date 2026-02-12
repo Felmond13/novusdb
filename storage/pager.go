@@ -30,6 +30,7 @@ type CollectionMeta struct {
 // Pager gère l'accès au fichier paginé unique.
 // IndexDef décrit un index persisté (collection + champ).
 type IndexDef struct {
+	Name       string // nom de l'index (ex: idx_city)
 	Collection string
 	Field      string
 	RootPageID uint32
@@ -51,6 +52,9 @@ type Pager struct {
 
 	// LRU page cache
 	cache *lruCache
+
+	// Dirty page buffer : pages modifiées en mémoire, flushées au commit
+	dirtyPages map[uint32][PageSize]byte
 
 	// Transaction support
 	inTx          bool
@@ -99,7 +103,8 @@ func openPager(path string, readOnly bool) (*Pager, error) {
 		lock:        lock,
 		collections: make(map[string]*CollectionMeta),
 		viewDefs:    make(map[string]string),
-		cache:       newLRUCache(1024), // 1024 pages = 4 MB cache
+		cache:       newLRUCache(8192), // 8192 pages = 32 MB cache
+		dirtyPages:  make(map[uint32][PageSize]byte),
 		readOnly:    readOnly,
 	}
 
@@ -175,6 +180,9 @@ func (p *Pager) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.readOnly {
+		if err := p.flushDirtyPages(); err != nil {
+			return err
+		}
 		if err := p.flushMeta(); err != nil {
 			return err
 		}
@@ -217,6 +225,13 @@ func (p *Pager) readPageUnlocked(pageID uint32) (*Page, error) {
 		page.Data = data
 		return page, nil
 	}
+	// Dirty page buffer hit? (page pas encore flushée sur disque)
+	if data, ok := p.dirtyPages[pageID]; ok {
+		page := &Page{}
+		page.Data = data
+		p.cache.put(pageID, data) // remettre en cache
+		return page, nil
+	}
 	// Cache miss → lecture disque
 	page := &Page{}
 	_, err := p.file.ReadAt(page.Data[:], int64(pageID)*PageSize)
@@ -254,17 +269,35 @@ func (p *Pager) writePageUnlocked(page *Page) error {
 			}
 		}
 	}
-	// WAL : logger l'after-image avant d'écrire dans le fichier data
+	// Buffer la page en mémoire (dirty) + mettre à jour le cache
+	p.dirtyPages[pid] = page.Data
+	p.cache.put(pid, page.Data)
+	return nil
+}
+
+// flushDirtyPages écrit toutes les dirty pages sur disque (WAL + data file).
+// Appelé par CommitWAL, FlushMeta, Close.
+func (p *Pager) flushDirtyPages() error {
+	if len(p.dirtyPages) == 0 {
+		return nil
+	}
+	// 1) WAL : logger toutes les dirty pages avant écriture
 	if p.wal != nil {
-		if _, err := p.wal.LogPageWrite(pid, page.Data[:]); err != nil {
-			return fmt.Errorf("pager: wal log: %w", err)
+		for pid, data := range p.dirtyPages {
+			if _, err := p.wal.LogPageWrite(pid, data[:]); err != nil {
+				return fmt.Errorf("pager: wal log: %w", err)
+			}
 		}
 	}
-	_, err := p.file.WriteAt(page.Data[:], int64(pid)*PageSize)
-	if err == nil {
-		p.cache.put(pid, page.Data)
+	// 2) Écrire toutes les dirty pages dans le fichier data
+	for pid, data := range p.dirtyPages {
+		if _, err := p.file.WriteAt(data[:], int64(pid)*PageSize); err != nil {
+			return err
+		}
 	}
-	return err
+	// 3) Vider le buffer
+	p.dirtyPages = make(map[uint32][PageSize]byte)
+	return nil
 }
 
 // AllocatePage alloue une nouvelle page et retourne son ID.
@@ -362,6 +395,9 @@ func (p *Pager) NextRecordID(collName string) (uint64, error) {
 func (p *Pager) FlushMeta() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if err := p.flushDirtyPages(); err != nil {
+		return err
+	}
 	return p.flushMeta()
 }
 
@@ -386,10 +422,15 @@ func (p *Pager) flushMeta() error {
 		off += 8
 	}
 
-	// Index definitions : [numIndexes:2] puis [collLen:2][coll][fieldLen:2][field]
+	// Index definitions : [numIndexes:2] puis [nameLen:2][name][collLen:2][coll][fieldLen:2][field][rootPageID:4]
 	binary.LittleEndian.PutUint16(page.Data[off:], uint16(len(p.indexDefs)))
 	off += 2
 	for _, idx := range p.indexDefs {
+		nameBytes := []byte(idx.Name)
+		binary.LittleEndian.PutUint16(page.Data[off:], uint16(len(nameBytes)))
+		off += 2
+		copy(page.Data[off:], nameBytes)
+		off += uint16(len(nameBytes))
 		collBytes := []byte(idx.Collection)
 		binary.LittleEndian.PutUint16(page.Data[off:], uint16(len(collBytes)))
 		off += 2
@@ -470,11 +511,16 @@ func (p *Pager) loadMetaPage() error {
 	}
 
 	// Charger les index definitions (si présentes)
+	// Format : [nameLen:2][name][collLen:2][coll][fieldLen:2][field][rootPageID:4]
 	if int(off)+2 <= len(page.Data) {
 		numIdx := binary.LittleEndian.Uint16(page.Data[off:])
 		off += 2
 		p.indexDefs = nil
 		for i := 0; i < int(numIdx); i++ {
+			nameLen := binary.LittleEndian.Uint16(page.Data[off:])
+			off += 2
+			idxName := string(page.Data[off : off+nameLen])
+			off += nameLen
 			collLen := binary.LittleEndian.Uint16(page.Data[off:])
 			off += 2
 			coll := string(page.Data[off : off+collLen])
@@ -485,7 +531,7 @@ func (p *Pager) loadMetaPage() error {
 			off += fieldLen
 			rootPageID := binary.LittleEndian.Uint32(page.Data[off:])
 			off += 4
-			p.indexDefs = append(p.indexDefs, IndexDef{Collection: coll, Field: field, RootPageID: rootPageID})
+			p.indexDefs = append(p.indexDefs, IndexDef{Name: idxName, Collection: coll, Field: field, RootPageID: rootPageID})
 		}
 	}
 
@@ -511,18 +557,44 @@ func (p *Pager) loadMetaPage() error {
 }
 
 // AddIndexDef ajoute une définition d'index persistée et flush la meta.
-func (p *Pager) AddIndexDef(collection, field string, rootPageID uint32) error {
+func (p *Pager) AddIndexDef(name, collection, field string, rootPageID uint32) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	// Vérifier doublon
+	// Vérifier doublon par collection+field
 	for i, d := range p.indexDefs {
 		if d.Collection == collection && d.Field == field {
 			p.indexDefs[i].RootPageID = rootPageID
+			p.indexDefs[i].Name = name
 			return p.flushMeta()
 		}
 	}
-	p.indexDefs = append(p.indexDefs, IndexDef{Collection: collection, Field: field, RootPageID: rootPageID})
+	p.indexDefs = append(p.indexDefs, IndexDef{Name: name, Collection: collection, Field: field, RootPageID: rootPageID})
 	return p.flushMeta()
+}
+
+// FindIndexDefByName cherche un index par son nom.
+func (p *Pager) FindIndexDefByName(name string) *IndexDef {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	for i := range p.indexDefs {
+		if p.indexDefs[i].Name == name {
+			return &p.indexDefs[i]
+		}
+	}
+	return nil
+}
+
+// RemoveIndexDefByName supprime un index par son nom.
+func (p *Pager) RemoveIndexDefByName(name string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i, d := range p.indexDefs {
+		if d.Name == name {
+			p.indexDefs = append(p.indexDefs[:i], p.indexDefs[i+1:]...)
+			return p.flushMeta()
+		}
+	}
+	return nil
 }
 
 // RemoveIndexDef supprime une définition d'index persistée et flush la meta.
@@ -646,26 +718,26 @@ func (p *Pager) MarkDeletedAtomic(pageID uint32, slotOffset uint16) error {
 // UpdateRecordAtomic met à jour un record in-place de manière atomique.
 // Si la taille diffère, marque l'ancien comme supprimé et insère le nouveau
 // dans la collection via InsertRecordAtomic (appelé sans lock, car cette méthode relâche le sien).
-func (p *Pager) UpdateRecordAtomic(coll *CollectionMeta, pageID uint32, slotOffset uint16, recordID uint64, newData []byte) error {
+func (p *Pager) UpdateRecordAtomic(coll *CollectionMeta, pageID uint32, slotOffset uint16, recordID uint64, newData []byte) (uint32, uint16, error) {
 	p.mu.Lock()
 
 	page, err := p.readPageUnlocked(pageID)
 	if err != nil {
 		p.mu.Unlock()
-		return err
+		return 0, 0, err
 	}
 
 	if page.UpdateRecordInPlace(slotOffset, newData) {
 		err = p.writePageUnlocked(page)
 		p.mu.Unlock()
-		return err
+		return pageID, slotOffset, err
 	}
 
 	// Taille différente : marquer supprimé puis réinsérer
 	page.MarkDeleted(slotOffset)
 	if err := p.writePageUnlocked(page); err != nil {
 		p.mu.Unlock()
-		return err
+		return 0, 0, err
 	}
 	p.mu.Unlock()
 
@@ -678,7 +750,7 @@ const maxInlineRecordSize = PageSize - PageHeaderSize - RecordSlotHeaderSize
 
 // InsertRecordAtomic insère un record dans les pages d'une collection de manière atomique.
 // Si le record dépasse maxInlineRecordSize, il est stocké dans des overflow pages.
-func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data []byte) error {
+func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data []byte) (uint32, uint16, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -687,7 +759,7 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 
 	// Gros document → overflow pages
 	if len(storeData) > maxInlineRecordSize {
-		return p.insertOverflowRecord(coll, recordID, data)
+		return 0, 0, p.insertOverflowRecord(coll, recordID, data)
 	}
 
 	// Résoudre la dernière page (cache ou walk unique)
@@ -696,31 +768,33 @@ func (p *Pager) InsertRecordAtomic(coll *CollectionMeta, recordID uint64, data [
 	// Essayer d'insérer dans la dernière page (O(1))
 	page, err := p.readPageUnlocked(lastPageID)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
+	slotOff := page.FreeSpaceOffset()
 	if page.AppendRecordWithFlag(recordID, storeData, storeFlag) {
-		return p.writePageUnlocked(page)
+		return lastPageID, slotOff, p.writePageUnlocked(page)
 	}
 
 	// Dernière page pleine : allouer et chaîner
 	newID, err := p.allocatePageUnlocked(PageTypeData)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	page.SetNextPageID(newID)
 	if err := p.writePageUnlocked(page); err != nil {
-		return err
+		return 0, 0, err
 	}
 
 	newPage, err := p.readPageUnlocked(newID)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
+	slotOff = newPage.FreeSpaceOffset()
 	if !newPage.AppendRecordWithFlag(recordID, storeData, storeFlag) {
-		return fmt.Errorf("pager: record too large for a single page")
+		return 0, 0, fmt.Errorf("pager: record too large for a single page")
 	}
 	coll.LastPageID = newID // mettre à jour le cache
-	return p.writePageUnlocked(newPage)
+	return newID, slotOff, p.writePageUnlocked(newPage)
 }
 
 // resolveLastPage retourne le LastPageID de la collection.
@@ -915,7 +989,10 @@ func (p *Pager) CommitTx() error {
 		return fmt.Errorf("pager: no active transaction")
 	}
 
-	// Flush meta + WAL commit pour rendre les écritures durables
+	// Flush dirty pages + meta + WAL commit pour rendre les écritures durables
+	if err := p.flushDirtyPages(); err != nil {
+		return err
+	}
 	if err := p.flushMeta(); err != nil {
 		return err
 	}
@@ -966,8 +1043,9 @@ func (p *Pager) RollbackTx() error {
 		return err
 	}
 
-	// Invalider le cache (les pages ont été restaurées à leur état avant-tx)
+	// Invalider le cache et les dirty pages (les pages ont été restaurées)
 	p.cache.clear()
+	p.dirtyPages = make(map[uint32][PageSize]byte)
 
 	// Tronquer le WAL (les écritures de la tx sont invalides)
 	if p.wal != nil {
@@ -1011,12 +1089,16 @@ func (p *Pager) InTx() bool {
 // Doit être appelé après chaque opération d'écriture complète (insert, update, delete).
 // Si une transaction est active, le commit est différé jusqu'à CommitTx().
 func (p *Pager) CommitWAL() error {
+	p.mu.Lock()
+	err := p.flushDirtyPages()
+	inTx := p.inTx
+	p.mu.Unlock()
+	if err != nil {
+		return err
+	}
 	if p.wal == nil {
 		return nil
 	}
-	p.mu.RLock()
-	inTx := p.inTx
-	p.mu.RUnlock()
 	if inTx {
 		return nil // différé — CommitTx() fera le commit WAL
 	}
@@ -1268,6 +1350,10 @@ func (p *Pager) WALPath() string {
 // Retourne les données à stocker et le flag approprié.
 // Si la compression n'apporte pas de gain, retourne les données originales avec SlotFlagActive.
 func (p *Pager) compressRecord(data []byte) ([]byte, byte) {
+	// Skip compression for small records — overhead > savings
+	if len(data) < 256 {
+		return data, SlotFlagActive
+	}
 	compressed := snappy.Encode(nil, data)
 	if len(compressed) < len(data) {
 		return compressed, SlotFlagCompressed

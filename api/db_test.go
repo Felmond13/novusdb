@@ -4583,7 +4583,7 @@ func TestDump(t *testing.T) {
 		t.Errorf("dump should contain INSERT INTO users, got:\n%s", dump)
 	}
 	// Should contain CREATE INDEX
-	if !strings.Contains(dump, "CREATE INDEX ON users (name)") {
+	if !strings.Contains(dump, "CREATE INDEX idx_users_name ON users (name)") {
 		t.Errorf("dump should contain CREATE INDEX, got:\n%s", dump)
 	}
 	// Should contain CREATE VIEW
@@ -4999,8 +4999,8 @@ func TestCacheHitRateAfterRepeatedQueries(t *testing.T) {
 	if size == 0 {
 		t.Error("expected cache size > 0")
 	}
-	if capacity != 1024 {
-		t.Errorf("expected capacity 1024, got %d", capacity)
+	if capacity != 8192 {
+		t.Errorf("expected capacity 8192, got %d", capacity)
 	}
 	if rate < 0.3 {
 		t.Errorf("expected hit rate >= 30%%, got %.1f%% (hits=%d, misses=%d)", rate*100, hits, misses)

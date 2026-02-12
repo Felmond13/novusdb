@@ -236,12 +236,13 @@ func (db *DB) InsertDoc(collection string, doc *storage.Document) (uint64, error
 	}
 
 	// Insertion atomique dans les pages de la collection
-	if err := db.pager.InsertRecordAtomic(coll, recordID, encoded); err != nil {
-		return 0, err
+	insPageID, insSlotOff, insErr := db.pager.InsertRecordAtomic(coll, recordID, encoded)
+	if insErr != nil {
+		return 0, insErr
 	}
 
 	// Mettre à jour les index
-	db.updateIndexes(collection, recordID, doc)
+	db.updateIndexes(collection, recordID, doc, insPageID, insSlotOff)
 
 	if err := db.pager.FlushMeta(); err != nil {
 		return 0, err
@@ -256,14 +257,14 @@ func (db *DB) InsertDoc(collection string, doc *storage.Document) (uint64, error
 }
 
 // updateIndexes met à jour tous les index après un insert programmatique.
-func (db *DB) updateIndexes(collection string, recordID uint64, doc *storage.Document) {
+func (db *DB) updateIndexes(collection string, recordID uint64, doc *storage.Document, pageID uint32, slotOff uint16) {
 	db.lockMgr.IndexMu.Lock()
 	defer db.lockMgr.IndexMu.Unlock()
 
 	for _, idx := range db.indexMgr.GetIndexesForCollection(collection) {
 		val, ok := doc.Get(idx.Field)
 		if ok {
-			idx.Add(index.ValueToKey(val), recordID)
+			idx.Add(index.ValueToKey(val), recordID, pageID, slotOff)
 		}
 	}
 }
@@ -394,7 +395,7 @@ func (db *DB) Dump() string {
 
 	// Index definitions
 	for _, def := range db.pager.IndexDefs() {
-		sb.WriteString(fmt.Sprintf("CREATE INDEX ON %s (%s);\n", def.Collection, def.Field))
+		sb.WriteString(fmt.Sprintf("CREATE INDEX %s ON %s (%s);\n", def.Name, def.Collection, def.Field))
 	}
 
 	// Views

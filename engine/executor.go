@@ -185,17 +185,25 @@ func (ex *Executor) execSelect(stmt *parser.SelectStatement) (*Result, error) {
 	} else {
 		// Simple scan path
 		forceFullScan := hasHint(stmt.Hints, parser.HintFullScan)
-		var candidateIDs []uint64
+		var candidateLocs []index.RecordLoc
+		hasAgg := hasAggregateColumns(stmt.Columns) || len(stmt.GroupBy) > 0
+
+		// Calculer earlyLimit : si pas de ORDER BY, GROUP BY ou aggrégat, on peut arrêter tôt
+		earlyLimit := -1
+		if stmt.Limit >= 0 && len(stmt.OrderBy) == 0 && !hasAgg {
+			earlyLimit = stmt.Limit + stmt.Offset
+		}
+
 		if !forceFullScan {
 			forceField := getHintParam(stmt.Hints, parser.HintForceIndex)
 			if forceField != "" {
-				candidateIDs = ex.resolveForceIndex(stmt.From, forceField, stmt.Where)
-			} else {
-				candidateIDs = ex.resolveIndexLookup(stmt.From, stmt.Where)
+				candidateLocs = ex.resolveForceIndex(stmt.From, forceField, stmt.Where)
+			} else if !hasAgg {
+				candidateLocs = ex.resolveIndexLookup(stmt.From, stmt.Where, earlyLimit)
 			}
 		}
-		if candidateIDs != nil {
-			docs, err = ex.scanByIDs(stmt.From, candidateIDs, stmt.Where)
+		if candidateLocs != nil {
+			docs, err = ex.readByLocs(stmt.From, candidateLocs, stmt.Where, earlyLimit)
 		} else {
 			docs, err = ex.scanCollection(stmt.From, stmt.Where)
 		}
@@ -706,14 +714,14 @@ func (ex *Executor) indexLookupJoin(
 		matched := false
 		if ok {
 			key := index.ValueToKey(val)
-			recordIDs, err := idx.Lookup(key)
+			locs, err := idx.Lookup(key)
 			if err != nil {
 				return nil, err
 			}
 
-			if len(recordIDs) > 0 {
-				// Charger les documents droits par leurs record_ids
-				rightDocs, err := ex.scanByIDs(rightTable, recordIDs, nil)
+			if len(locs) > 0 {
+				// Charger les documents droits par leurs localisations
+				rightDocs, err := ex.readByLocs(rightTable, locs, nil, -1)
 				if err != nil {
 					return nil, err
 				}
@@ -777,11 +785,12 @@ func (ex *Executor) execInsert(stmt *parser.InsertStatement) (*Result, error) {
 			return nil, err
 		}
 
-		if err := ex.pager.InsertRecordAtomic(coll, recordID, encoded); err != nil {
-			return nil, err
+		insPageID, insSlotOff, insErr := ex.pager.InsertRecordAtomic(coll, recordID, encoded)
+		if insErr != nil {
+			return nil, insErr
 		}
 
-		ex.updateIndexesAfterInsert(stmt.Table, recordID, doc)
+		ex.updateIndexesAfterInsert(stmt.Table, recordID, doc, insPageID, insSlotOff)
 		lastID = recordID
 	}
 
@@ -901,12 +910,13 @@ func (ex *Executor) execInsertOrReplace(stmt *parser.InsertStatement, doc *stora
 		}
 
 		coll := ex.pager.GetCollection(stmt.Table)
-		if err := ex.pager.UpdateRecordAtomic(coll, rec.pageID, rec.slotOffset, rec.recordID, encoded); err != nil {
-			return nil, err
+		newPID, newSOff, updErr := ex.pager.UpdateRecordAtomic(coll, rec.pageID, rec.slotOffset, rec.recordID, encoded)
+		if updErr != nil {
+			return nil, updErr
 		}
 
 		// Mettre à jour les index
-		ex.updateIndexesAfterUpdate(stmt.Table, rec.recordID, rec.doc, oldDoc)
+		ex.updateIndexesAfterUpdate(stmt.Table, rec.recordID, rec.doc, oldDoc, newPID, newSOff)
 
 		if err := ex.pager.CommitWAL(); err != nil {
 			return nil, err
@@ -932,11 +942,12 @@ func (ex *Executor) execInsertOrReplace(stmt *parser.InsertStatement, doc *stora
 		return nil, err
 	}
 
-	if err := ex.pager.InsertRecordAtomic(coll, recordID, encoded); err != nil {
-		return nil, err
+	insPageID, insSlotOff, insErr := ex.pager.InsertRecordAtomic(coll, recordID, encoded)
+	if insErr != nil {
+		return nil, insErr
 	}
 
-	ex.updateIndexesAfterInsert(stmt.Table, recordID, doc)
+	ex.updateIndexesAfterInsert(stmt.Table, recordID, doc, insPageID, insSlotOff)
 
 	if err := ex.pager.FlushMeta(); err != nil {
 		return nil, err
@@ -980,11 +991,12 @@ func (ex *Executor) execInsertFromSelect(stmt *parser.InsertStatement) (*Result,
 			return nil, err
 		}
 
-		if err := ex.pager.InsertRecordAtomic(coll, recordID, encoded); err != nil {
-			return nil, err
+		insPageID, insSlotOff, insErr := ex.pager.InsertRecordAtomic(coll, recordID, encoded)
+		if insErr != nil {
+			return nil, insErr
 		}
 
-		ex.updateIndexesAfterInsert(stmt.Table, recordID, rd.Doc)
+		ex.updateIndexesAfterInsert(stmt.Table, recordID, rd.Doc, insPageID, insSlotOff)
 		lastID = recordID
 		affected++
 	}
@@ -1014,13 +1026,13 @@ func (ex *Executor) execUpdate(stmt *parser.UpdateStatement) (*Result, error) {
 		}
 	}
 	// Scanner pour trouver les documents correspondants
-	candidateIDs := ex.resolveIndexLookup(stmt.Table, stmt.Where)
+	candidateLocs := ex.resolveIndexLookup(stmt.Table, stmt.Where, -1)
 
 	var targets []*scanResult
 	var err error
 
-	if candidateIDs != nil {
-		targets, err = ex.scanByIDsRaw(stmt.Table, candidateIDs, stmt.Where)
+	if candidateLocs != nil {
+		targets, err = ex.readByLocsRaw(candidateLocs, stmt.Where, -1)
 	} else {
 		targets, err = ex.scanCollectionRaw(stmt.Table, stmt.Where)
 	}
@@ -1071,13 +1083,14 @@ func (ex *Executor) execUpdate(stmt *parser.UpdateStatement) (*Result, error) {
 
 		// Mettre à jour de manière atomique (read-modify-write sous lock pager)
 		coll := ex.pager.GetCollection(stmt.Table)
-		if err := ex.pager.UpdateRecordAtomic(coll, t.pageID, t.slotOffset, t.recordID, newEncoded); err != nil {
+		newPID, newSOff, updErr := ex.pager.UpdateRecordAtomic(coll, t.pageID, t.slotOffset, t.recordID, newEncoded)
+		if updErr != nil {
 			ex.lockMgr.ReleaseRecord(stmt.Table, t.recordID)
-			return nil, err
+			return nil, updErr
 		}
 
 		// Mettre à jour les index
-		ex.updateIndexesAfterUpdate(stmt.Table, t.recordID, oldDoc, newDoc)
+		ex.updateIndexesAfterUpdate(stmt.Table, t.recordID, oldDoc, newDoc, newPID, newSOff)
 
 		ex.lockMgr.ReleaseRecord(stmt.Table, t.recordID)
 		affected++
@@ -1104,13 +1117,13 @@ func (ex *Executor) execDelete(stmt *parser.DeleteStatement) (*Result, error) {
 			return nil, err
 		}
 	}
-	candidateIDs := ex.resolveIndexLookup(stmt.Table, stmt.Where)
+	candidateLocs := ex.resolveIndexLookup(stmt.Table, stmt.Where, -1)
 
 	var targets []*scanResult
 	var err error
 
-	if candidateIDs != nil {
-		targets, err = ex.scanByIDsRaw(stmt.Table, candidateIDs, stmt.Where)
+	if candidateLocs != nil {
+		targets, err = ex.readByLocsRaw(candidateLocs, stmt.Where, -1)
 	} else {
 		targets, err = ex.scanCollectionRaw(stmt.Table, stmt.Where)
 	}
@@ -1157,31 +1170,74 @@ func (ex *Executor) execCreateIndex(stmt *parser.CreateIndexStatement) (*Result,
 		return nil, err
 	}
 
-	// Construire l'index à partir des données existantes
+	// Construire l'index via bulk load : collecter → trier → construire O(N)
 	coll := ex.pager.GetCollection(stmt.Table)
 	if coll == nil {
 		return &Result{}, nil
 	}
 
-	docs, err := ex.scanCollectionRaw(stmt.Table, nil)
-	if err != nil {
+	fieldPath := strings.Split(stmt.Field, ".")
+	pageID := coll.FirstPageID
+
+	var entries []index.BulkEntry
+	for pageID != 0 {
+		page, err := ex.pager.ReadPage(pageID)
+		if err != nil {
+			return nil, err
+		}
+		slots := page.ReadRecords()
+		for _, slot := range slots {
+			if slot.Deleted {
+				continue
+			}
+			data := slot.Data
+			if slot.Overflow {
+				totalLen, firstPage := slot.OverflowInfo()
+				var err2 error
+				data, err2 = ex.pager.ReadOverflowData(totalLen, firstPage)
+				if err2 != nil {
+					continue
+				}
+			}
+			if slot.Compressed && !slot.Overflow {
+				var err2 error
+				data, err2 = storage.DecompressRecord(&slot)
+				if err2 != nil {
+					continue
+				}
+			}
+			doc, err := storage.Decode(data)
+			if err != nil {
+				continue
+			}
+			val, ok := doc.GetNested(fieldPath)
+			if ok {
+				entries = append(entries, index.BulkEntry{
+					Key:      index.ValueToKey(val),
+					RecordID: slot.RecordID,
+					PageID:   pageID,
+					SlotOff:  slot.Offset,
+				})
+			}
+		}
+		pageID = page.NextPageID()
+	}
+
+	// Trier par clé puis par recordID
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].Key != entries[j].Key {
+			return entries[i].Key < entries[j].Key
+		}
+		return entries[i].RecordID < entries[j].RecordID
+	})
+
+	// Bulk load O(N) au lieu de N inserts O(N log N)
+	if err := idx.BulkLoad(entries); err != nil {
 		return nil, err
 	}
 
-	ex.lockMgr.IndexMu.Lock()
-	defer ex.lockMgr.IndexMu.Unlock()
-
-	for _, d := range docs {
-		val, ok := d.doc.GetNested(strings.Split(stmt.Field, "."))
-		if ok {
-			if err := idx.Add(index.ValueToKey(val), d.recordID); err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	// Persister la définition de l'index avec la page racine du B-Tree
-	if err := ex.pager.AddIndexDef(stmt.Table, stmt.Field, idx.RootPageID()); err != nil {
+	if err := ex.pager.AddIndexDef(stmt.Name, stmt.Table, stmt.Field, idx.RootPageID()); err != nil {
 		return nil, err
 	}
 
@@ -1189,13 +1245,33 @@ func (ex *Executor) execCreateIndex(stmt *parser.CreateIndexStatement) (*Result,
 }
 
 func (ex *Executor) execDropIndex(stmt *parser.DropIndexStatement) (*Result, error) {
+	if stmt.Name != "" {
+		// DROP INDEX <name> : résoudre le nom vers collection+field
+		def := ex.pager.FindIndexDefByName(stmt.Name)
+		if def == nil {
+			if stmt.IfExists {
+				return &Result{}, nil
+			}
+			return nil, fmt.Errorf("index %q not found", stmt.Name)
+		}
+		if err := ex.indexMgr.DropIndex(def.Collection, def.Field); err != nil {
+			if !stmt.IfExists {
+				return nil, err
+			}
+		}
+		if err := ex.pager.RemoveIndexDefByName(stmt.Name); err != nil {
+			return nil, err
+		}
+		return &Result{}, nil
+	}
+
+	// DROP INDEX ON table(field) — ancienne syntaxe
 	if err := ex.indexMgr.DropIndex(stmt.Table, stmt.Field); err != nil {
 		if stmt.IfExists {
 			return &Result{}, nil
 		}
 		return nil, err
 	}
-	// Supprimer la définition persistée
 	if err := ex.pager.RemoveIndexDef(stmt.Table, stmt.Field); err != nil {
 		return nil, err
 	}
@@ -1274,7 +1350,7 @@ func (ex *Executor) execTruncate(stmt *parser.TruncateTableStatement) (*Result, 
 				return nil, err
 			}
 			// Mettre à jour la page racine dans la définition persistée
-			if err := ex.pager.AddIndexDef(def.Collection, def.Field, idx.RootPageID()); err != nil {
+			if err := ex.pager.AddIndexDef(def.Name, def.Collection, def.Field, idx.RootPageID()); err != nil {
 				return nil, err
 			}
 		}
@@ -1542,7 +1618,142 @@ func (ex *Executor) scanCollectionRaw(collName string, where parser.Expr) ([]*sc
 	return results, nil
 }
 
-// scanByIDs lit des documents par leurs record_ids (lookup index).
+// readByLocs lit des documents directement par leurs localisations physiques (O(1) par record).
+// limit <= 0 signifie pas de limite.
+func (ex *Executor) readByLocs(collName string, locs []index.RecordLoc, where parser.Expr, limit int) ([]*ResultDoc, error) {
+	raw, err := ex.readByLocsRaw(locs, where, limit)
+	if err != nil {
+		return nil, err
+	}
+	docs := make([]*ResultDoc, len(raw))
+	for i, r := range raw {
+		docs[i] = &ResultDoc{RecordID: r.recordID, Doc: r.doc}
+	}
+	return docs, nil
+}
+
+// readByLocsRaw lit des records directement depuis les pages indiquées par les localisations.
+// limit <= 0 signifie pas de limite.
+// Fast path : si limit est petit, itère les locs directement sans grouper (évite alloc map).
+// Grouped path : sinon, groupe par pageID pour ne lire chaque page qu'une fois.
+func (ex *Executor) readByLocsRaw(locs []index.RecordLoc, where parser.Expr, limit int) ([]*scanResult, error) {
+	// Fast path pour petits LIMITs : pas de grouping, itération directe
+	if limit > 0 && limit <= 100 {
+		return ex.readByLocsDirect(locs, where, limit)
+	}
+
+	// Grouped path : grouper par pageID pour minimiser les lectures
+	type slotRef struct {
+		slotOff  uint16
+		recordID uint64
+	}
+	grouped := make(map[uint32][]slotRef, len(locs)/10+1)
+	for _, loc := range locs {
+		grouped[loc.PageID] = append(grouped[loc.PageID], slotRef{loc.SlotOff, loc.RecordID})
+	}
+
+	var results []*scanResult
+	for pageID, refs := range grouped {
+		page, err := ex.pager.ReadPage(pageID)
+		if err != nil {
+			continue
+		}
+		for _, ref := range refs {
+			slot, ok := page.ReadRecordAt(ref.slotOff)
+			if !ok || slot.Deleted || slot.RecordID != ref.recordID {
+				continue
+			}
+			data := slot.Data
+			if slot.Overflow {
+				totalLen, firstPage := slot.OverflowInfo()
+				data, err = ex.pager.ReadOverflowData(totalLen, firstPage)
+				if err != nil {
+					continue
+				}
+			}
+			if slot.Compressed && !slot.Overflow {
+				dec, err2 := storage.DecompressRecord(&slot)
+				if err2 != nil {
+					continue
+				}
+				data = dec
+			}
+			doc, err := storage.Decode(data)
+			if err != nil {
+				continue
+			}
+			match, err := EvalExpr(where, doc)
+			if err != nil {
+				return nil, err
+			}
+			if match {
+				results = append(results, &scanResult{
+					recordID:   slot.RecordID,
+					doc:        doc,
+					pageID:     pageID,
+					slotOffset: slot.Offset,
+				})
+				if limit > 0 && len(results) >= limit {
+					return results, nil
+				}
+			}
+		}
+	}
+	return results, nil
+}
+
+// readByLocsDirect itère les locs séquentiellement sans grouper par page.
+// Idéal pour LIMIT petit : on lit quelques pages et on s'arrête immédiatement.
+func (ex *Executor) readByLocsDirect(locs []index.RecordLoc, where parser.Expr, limit int) ([]*scanResult, error) {
+	var results []*scanResult
+	for _, loc := range locs {
+		page, err := ex.pager.ReadPage(loc.PageID)
+		if err != nil {
+			continue
+		}
+		slot, ok := page.ReadRecordAt(loc.SlotOff)
+		if !ok || slot.Deleted || slot.RecordID != loc.RecordID {
+			continue
+		}
+		data := slot.Data
+		if slot.Overflow {
+			totalLen, firstPage := slot.OverflowInfo()
+			data, err = ex.pager.ReadOverflowData(totalLen, firstPage)
+			if err != nil {
+				continue
+			}
+		}
+		if slot.Compressed && !slot.Overflow {
+			dec, err2 := storage.DecompressRecord(&slot)
+			if err2 != nil {
+				continue
+			}
+			data = dec
+		}
+		doc, err := storage.Decode(data)
+		if err != nil {
+			continue
+		}
+		match, err := EvalExpr(where, doc)
+		if err != nil {
+			return nil, err
+		}
+		if match {
+			results = append(results, &scanResult{
+				recordID:   slot.RecordID,
+				doc:        doc,
+				pageID:     loc.PageID,
+				slotOffset: slot.Offset,
+			})
+			if len(results) >= limit {
+				return results, nil
+			}
+		}
+	}
+	return results, nil
+}
+
+// scanByIDs lit des documents par leurs record_ids (lookup index — fallback sans localisation).
 func (ex *Executor) scanByIDs(collName string, ids []uint64, where parser.Expr) ([]*ResultDoc, error) {
 	raw, err := ex.scanByIDsRaw(collName, ids, where)
 	if err != nil {
@@ -1601,6 +1812,7 @@ func (ex *Executor) scanByIDsRaw(collName string, ids []uint64, where parser.Exp
 			if err != nil {
 				continue
 			}
+			delete(idSet, slot.RecordID) // marquer comme trouvé
 			match, err := EvalExpr(where, doc)
 			if err != nil {
 				return nil, err
@@ -1614,6 +1826,9 @@ func (ex *Executor) scanByIDsRaw(collName string, ids []uint64, where parser.Exp
 				})
 			}
 		}
+		if len(idSet) == 0 {
+			break // tous les IDs trouvés, stop le scan
+		}
 		pageID = page.NextPageID()
 	}
 	return results, nil
@@ -1623,7 +1838,7 @@ func (ex *Executor) scanByIDsRaw(collName string, ids []uint64, where parser.Exp
 
 // resolveIndexLookup essaie de résoudre un WHERE simple via un index.
 // Retourne nil si aucun index n'est utilisable.
-func (ex *Executor) resolveIndexLookup(collName string, where parser.Expr) []uint64 {
+func (ex *Executor) resolveIndexLookup(collName string, where parser.Expr, limit int) []index.RecordLoc {
 	if where == nil {
 		return nil
 	}
@@ -1648,12 +1863,12 @@ func (ex *Executor) resolveIndexLookup(collName string, where parser.Expr) []uin
 		return nil
 	}
 	key := index.ValueToKey(literalToValue(lit.Token))
-	ids, _ := idx.Lookup(key)
-	return ids
+	locs, _ := idx.LookupLimit(key, limit)
+	return locs
 }
 
 // resolveForceIndex force l'utilisation d'un index sur un champ spécifique (hint FORCE_INDEX).
-func (ex *Executor) resolveForceIndex(collName, field string, where parser.Expr) []uint64 {
+func (ex *Executor) resolveForceIndex(collName, field string, where parser.Expr) []index.RecordLoc {
 	idx := ex.indexMgr.GetIndex(collName, field)
 	if idx == nil {
 		return nil // index inexistant → fallback full scan
@@ -1675,19 +1890,19 @@ func (ex *Executor) resolveForceIndex(collName, field string, where parser.Expr)
 			return nil
 		}
 		key := index.ValueToKey(literalToValue(lit.Token))
-		ids, _ := idx.Lookup(key)
-		return ids
+		locs, _ := idx.Lookup(key)
+		return locs
 	}
 	lit, ok := be.Right.(*parser.LiteralExpr)
 	if !ok {
 		return nil
 	}
 	key := index.ValueToKey(literalToValue(lit.Token))
-	ids, _ := idx.Lookup(key)
-	return ids
+	locs, _ := idx.Lookup(key)
+	return locs
 }
 
-func (ex *Executor) updateIndexesAfterInsert(collName string, recordID uint64, doc *storage.Document) {
+func (ex *Executor) updateIndexesAfterInsert(collName string, recordID uint64, doc *storage.Document, pageID uint32, slotOff uint16) {
 	ex.lockMgr.IndexMu.Lock()
 	defer ex.lockMgr.IndexMu.Unlock()
 
@@ -1695,7 +1910,7 @@ func (ex *Executor) updateIndexesAfterInsert(collName string, recordID uint64, d
 		path := strings.Split(idx.Field, ".")
 		val, ok := doc.GetNested(path)
 		if ok {
-			idx.Add(index.ValueToKey(val), recordID) // erreur ignorée (best-effort)
+			idx.Add(index.ValueToKey(val), recordID, pageID, slotOff) // best-effort
 		}
 	}
 }
@@ -1713,7 +1928,7 @@ func (ex *Executor) updateIndexesAfterDelete(collName string, recordID uint64, d
 	}
 }
 
-func (ex *Executor) updateIndexesAfterUpdate(collName string, recordID uint64, oldDoc, newDoc *storage.Document) {
+func (ex *Executor) updateIndexesAfterUpdate(collName string, recordID uint64, oldDoc, newDoc *storage.Document, newPageID uint32, newSlotOff uint16) {
 	ex.lockMgr.IndexMu.Lock()
 	defer ex.lockMgr.IndexMu.Unlock()
 
@@ -1726,8 +1941,8 @@ func (ex *Executor) updateIndexesAfterUpdate(collName string, recordID uint64, o
 		newKey := index.ValueToKey(newVal)
 
 		if oldKey != newKey {
-			idx.Remove(oldKey, recordID) // best-effort
-			idx.Add(newKey, recordID)    // best-effort
+			idx.Remove(oldKey, recordID)                     // best-effort
+			idx.Add(newKey, recordID, newPageID, newSlotOff) // best-effort
 		}
 	}
 }
@@ -1989,7 +2204,7 @@ func (ex *Executor) applyGroupBy(docs []*ResultDoc, stmt *parser.SelectStatement
 			}
 		}
 
-		// Calculer les agrégats
+		// Calculer les agrégats et copier les colonnes non-agrégat
 		for _, col := range stmt.Columns {
 			actualCol := col
 			alias := ""
@@ -1999,15 +2214,30 @@ func (ex *Executor) applyGroupBy(docs []*ResultDoc, stmt *parser.SelectStatement
 			}
 
 			fc, ok := actualCol.(*parser.FuncCallExpr)
-			if !ok {
-				continue
-			}
-
-			aggVal := ex.computeAggregate(fc, groupDocs)
-			// Toujours stocker sous le nom de la fonction (pour HAVING)
-			resultDoc.Set(fc.Name, aggVal)
-			if alias != "" {
-				resultDoc.Set(alias, aggVal)
+			if ok {
+				aggVal := ex.computeAggregate(fc, groupDocs)
+				// Toujours stocker sous le nom de la fonction (pour HAVING)
+				resultDoc.Set(fc.Name, aggVal)
+				if alias != "" {
+					resultDoc.Set(alias, aggVal)
+				}
+			} else {
+				// Colonne non-agrégat (ex: d.budget) → copier du premier doc du groupe
+				path := ExprToFieldPath(actualCol)
+				if len(path) > 0 {
+					val, found := groupDocs[0].Doc.GetNested(path)
+					if found {
+						dottedName := ExprToFieldName(actualCol)
+						// Stocker sous le nom complet (pour que projectColumns puisse résoudre d.budget)
+						if _, exists := resultDoc.Get(dottedName); !exists {
+							resultDoc.Set(dottedName, val)
+						}
+						// Stocker aussi sous l'alias si présent
+						if alias != "" {
+							resultDoc.Set(alias, val)
+						}
+					}
+				}
 			}
 		}
 

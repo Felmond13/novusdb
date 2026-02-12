@@ -227,8 +227,9 @@ type DeleteStatement struct {
 
 func (s *DeleteStatement) statementNode() {}
 
-// CreateIndexStatement représente CREATE INDEX ON table (field).
+// CreateIndexStatement représente CREATE INDEX [name] ON table (field).
 type CreateIndexStatement struct {
+	Name        string // nom optionnel de l'index (ex: idx_city)
 	Table       string
 	Field       string
 	IfNotExists bool
@@ -236,10 +237,11 @@ type CreateIndexStatement struct {
 
 func (s *CreateIndexStatement) statementNode() {}
 
-// DropIndexStatement représente DROP INDEX ON table (field).
+// DropIndexStatement représente DROP INDEX <name> ou DROP INDEX ON table (field).
 type DropIndexStatement struct {
-	Table    string
-	Field    string
+	Name     string // nom de l'index (si DROP INDEX <name>)
+	Table    string // table (si DROP INDEX ON table(field))
+	Field    string // champ (si DROP INDEX ON table(field))
 	IfExists bool
 }
 

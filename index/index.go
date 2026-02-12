@@ -8,6 +8,13 @@ import (
 	"github.com/Felmond13/novusdb/storage"
 )
 
+// RecordLoc représente la localisation physique d'un record.
+type RecordLoc struct {
+	RecordID uint64
+	PageID   uint32
+	SlotOff  uint16
+}
+
 // Index représente un index sur un champ d'une collection, adossé à un B-Tree.
 type Index struct {
 	Collection string
@@ -39,11 +46,32 @@ func (idx *Index) RootPageID() uint32 {
 	return idx.btree.RootPageID
 }
 
-// Add ajoute un record_id pour la clé donnée.
-func (idx *Index) Add(key string, recordID uint64) error {
+// BulkEntry représente une entrée pour le chargement en masse d'un index.
+type BulkEntry struct {
+	Key      string
+	RecordID uint64
+	PageID   uint32
+	SlotOff  uint16
+}
+
+// BulkLoad construit l'index à partir d'un slice d'entrées pré-triées par Key.
+// O(N) au lieu de O(N log N) pour N appels à Add.
+func (idx *Index) BulkLoad(entries []BulkEntry) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
-	return idx.btree.Insert(key, recordID)
+	// Convertir en btreeEntry
+	btEntries := make([]btreeEntry, len(entries))
+	for i, e := range entries {
+		btEntries[i] = btreeEntry{Key: e.Key, RecordID: e.RecordID, PageID: e.PageID, SlotOff: e.SlotOff}
+	}
+	return idx.btree.BulkLoad(btEntries)
+}
+
+// Add ajoute un record avec sa localisation pour la clé donnée.
+func (idx *Index) Add(key string, recordID uint64, pageID uint32, slotOff uint16) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	return idx.btree.Insert(key, recordID, pageID, slotOff)
 }
 
 // Remove supprime un record_id pour la clé donnée.
@@ -53,18 +81,50 @@ func (idx *Index) Remove(key string, recordID uint64) error {
 	return idx.btree.Remove(key, recordID)
 }
 
-// Lookup retourne les record_ids associés à une clé.
-func (idx *Index) Lookup(key string) ([]uint64, error) {
+// Lookup retourne les localisations associées à une clé.
+func (idx *Index) Lookup(key string) ([]RecordLoc, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
-	return idx.btree.Lookup(key)
+	entries, err := idx.btree.Lookup(key)
+	if err != nil {
+		return nil, err
+	}
+	locs := make([]RecordLoc, len(entries))
+	for i, e := range entries {
+		locs[i] = RecordLoc{RecordID: e.RecordID, PageID: e.PageID, SlotOff: e.SlotOff}
+	}
+	return locs, nil
 }
 
-// RangeScan retourne les record_ids dont la clé est dans l'intervalle [minKey, maxKey].
-func (idx *Index) RangeScan(minKey, maxKey string) ([]uint64, error) {
+// LookupLimit retourne au plus 'limit' localisations associées à une clé.
+// Si limit <= 0, retourne toutes les localisations (comme Lookup).
+func (idx *Index) LookupLimit(key string, limit int) ([]RecordLoc, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
-	return idx.btree.RangeScan(minKey, maxKey)
+	entries, err := idx.btree.LookupLimit(key, limit)
+	if err != nil {
+		return nil, err
+	}
+	locs := make([]RecordLoc, len(entries))
+	for i, e := range entries {
+		locs[i] = RecordLoc{RecordID: e.RecordID, PageID: e.PageID, SlotOff: e.SlotOff}
+	}
+	return locs, nil
+}
+
+// RangeScan retourne les localisations dont la clé est dans l'intervalle [minKey, maxKey].
+func (idx *Index) RangeScan(minKey, maxKey string) ([]RecordLoc, error) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	entries, err := idx.btree.RangeScan(minKey, maxKey)
+	if err != nil {
+		return nil, err
+	}
+	locs := make([]RecordLoc, len(entries))
+	for i, e := range entries {
+		locs[i] = RecordLoc{RecordID: e.RecordID, PageID: e.PageID, SlotOff: e.SlotOff}
+	}
+	return locs, nil
 }
 
 // AllEntries retourne toutes les entrées de l'index (pour debug/test).

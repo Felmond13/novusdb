@@ -280,7 +280,7 @@ func TestPagerWALIntegration(t *testing.T) {
 		t.Fatalf("next record id: %v", err)
 	}
 
-	if err := p.InsertRecordAtomic(coll, rid, encoded); err != nil {
+	if _, _, err := p.InsertRecordAtomic(coll, rid, encoded); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
@@ -358,7 +358,7 @@ func TestPagerWALRecovery(t *testing.T) {
 			doc.Set("idx", int64(i))
 			encoded, _ := doc.Encode()
 			rid, _ := p.NextRecordID("items")
-			p.InsertRecordAtomic(coll, rid, encoded)
+			p.InsertRecordAtomic(coll, rid, encoded) //nolint
 		}
 
 		p.FlushMeta()
@@ -423,7 +423,10 @@ func TestPagerCheckpoint(t *testing.T) {
 		doc.Set("val", int64(i))
 		encoded, _ := doc.Encode()
 		rid, _ := p.NextRecordID("data")
-		p.InsertRecordAtomic(coll, rid, encoded)
+		_, _, err = p.InsertRecordAtomic(coll, rid, encoded)
+		if err != nil {
+			t.Fatalf("insert: %v", err)
+		}
 	}
 	p.FlushMeta()
 	p.CommitWAL()
@@ -439,7 +442,10 @@ func TestPagerCheckpoint(t *testing.T) {
 		doc.Set("val", int64(i))
 		encoded, _ := doc.Encode()
 		rid, _ := p.NextRecordID("data")
-		p.InsertRecordAtomic(coll, rid, encoded)
+		_, _, err = p.InsertRecordAtomic(coll, rid, encoded)
+		if err != nil {
+			t.Fatalf("insert: %v", err)
+		}
 	}
 	p.FlushMeta()
 	p.CommitWAL()
@@ -482,7 +488,10 @@ func TestWALDeleteAndUpdateDurability(t *testing.T) {
 	doc.Set("status", "active")
 	encoded, _ := doc.Encode()
 	rid, _ := p.NextRecordID("test")
-	p.InsertRecordAtomic(coll, rid, encoded)
+	_, _, err = p.InsertRecordAtomic(coll, rid, encoded)
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
 	p.FlushMeta()
 	p.CommitWAL()
 
@@ -498,7 +507,7 @@ func TestWALDeleteAndUpdateDurability(t *testing.T) {
 	doc2 := NewDocument()
 	doc2.Set("status", "done")
 	encoded2, _ := doc2.Encode()
-	if err := p.UpdateRecordAtomic(coll, coll.FirstPageID, slot.Offset, rid, encoded2); err != nil {
+	if _, _, err := p.UpdateRecordAtomic(coll, coll.FirstPageID, slot.Offset, rid, encoded2); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	p.CommitWAL()

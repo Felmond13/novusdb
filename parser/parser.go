@@ -758,6 +758,9 @@ func (p *Parser) parseCreateIndex() (*CreateIndexStatement, error) {
 		return nil, err
 	}
 
+	// Nom optionnel de l'index : CREATE INDEX [name] ...
+	var indexName string
+
 	// IF NOT EXISTS
 	ifNotExists := false
 	if p.current.Type == TokenIf {
@@ -769,6 +772,21 @@ func (p *Parser) parseCreateIndex() (*CreateIndexStatement, error) {
 			return nil, err
 		}
 		ifNotExists = true
+	} else if p.current.Type == TokenIdent {
+		// C'est un nom d'index : CREATE INDEX idx_name ON ...
+		indexName = p.current.Literal
+		p.advance()
+		// Vérifier IF NOT EXISTS après le nom
+		if p.current.Type == TokenIf {
+			p.advance()
+			if _, err := p.expect(TokenNot); err != nil {
+				return nil, err
+			}
+			if _, err := p.expect(TokenExists); err != nil {
+				return nil, err
+			}
+			ifNotExists = true
+		}
 	}
 
 	if _, err := p.expect(TokenOn); err != nil {
@@ -797,7 +815,13 @@ func (p *Parser) parseCreateIndex() (*CreateIndexStatement, error) {
 	if _, err := p.expect(TokenRParen); err != nil {
 		return nil, err
 	}
-	return &CreateIndexStatement{Table: tableTok.Literal, Field: fieldName, IfNotExists: ifNotExists}, nil
+
+	// Auto-générer le nom si absent : idx_<table>_<field>
+	if indexName == "" {
+		indexName = "idx_" + tableTok.Literal + "_" + fieldTok.Literal
+	}
+
+	return &CreateIndexStatement{Name: indexName, Table: tableTok.Literal, Field: fieldName, IfNotExists: ifNotExists}, nil
 }
 
 func (p *Parser) parseDrop() (Statement, error) {
@@ -857,6 +881,7 @@ func (p *Parser) parseDrop() (Statement, error) {
 		return &DropTableStatement{Table: tableTok.Literal, IfExists: ifExists}, nil
 	}
 
+	// DROP INDEX [IF EXISTS] <name>
 	// DROP INDEX [IF EXISTS] ON <table> (<field>)
 	if _, err := p.expect(TokenIndex); err != nil {
 		return nil, err
@@ -869,33 +894,42 @@ func (p *Parser) parseDrop() (Statement, error) {
 		}
 		ifExists = true
 	}
-	if _, err := p.expect(TokenOn); err != nil {
-		return nil, err
-	}
-	tableTok, err := p.expect(TokenIdent)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := p.expect(TokenLParen); err != nil {
-		return nil, err
-	}
-	fieldTok, err := p.expect(TokenIdent)
-	if err != nil {
-		return nil, err
-	}
-	fieldName := fieldTok.Literal
-	for p.current.Type == TokenDot {
-		p.advance() // skip '.'
-		next, err := p.expect(TokenIdent)
+
+	// Si le token suivant est ON → ancienne syntaxe DROP INDEX ON table(field)
+	if p.current.Type == TokenOn {
+		p.advance() // skip ON
+		tableTok, err := p.expect(TokenIdent)
 		if err != nil {
 			return nil, err
 		}
-		fieldName += "." + next.Literal
+		if _, err := p.expect(TokenLParen); err != nil {
+			return nil, err
+		}
+		fieldTok, err := p.expect(TokenIdent)
+		if err != nil {
+			return nil, err
+		}
+		fieldName := fieldTok.Literal
+		for p.current.Type == TokenDot {
+			p.advance()
+			next, err := p.expect(TokenIdent)
+			if err != nil {
+				return nil, err
+			}
+			fieldName += "." + next.Literal
+		}
+		if _, err := p.expect(TokenRParen); err != nil {
+			return nil, err
+		}
+		return &DropIndexStatement{Table: tableTok.Literal, Field: fieldName, IfExists: ifExists}, nil
 	}
-	if _, err := p.expect(TokenRParen); err != nil {
+
+	// Sinon → nouvelle syntaxe : DROP INDEX <name>
+	nameTok, err := p.expect(TokenIdent)
+	if err != nil {
 		return nil, err
 	}
-	return &DropIndexStatement{Table: tableTok.Literal, Field: fieldName, IfExists: ifExists}, nil
+	return &DropIndexStatement{Name: nameTok.Literal, IfExists: ifExists}, nil
 }
 
 // ---------- Expressions ----------
