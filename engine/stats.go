@@ -903,13 +903,20 @@ func (ex *Executor) buildExplainPlan(s *parser.SelectStatement) *storage.Documen
 		doc.Set("stats", "HEURISTIC")
 	}
 
-	// Scan strategy
+	// Scan strategy (CBO)
 	candidateIDs := ex.resolveIndexLookup(s.From, s.Where, -1)
 	if candidateIDs != nil {
-		doc.Set("scan", "INDEX LOOKUP")
+		if ex.shouldUseIndex(s.From, s.Where, candidateIDs) {
+			doc.Set("scan", "INDEX LOOKUP")
+			doc.Set("scan_reason", "CBO: index cheaper than full scan")
+		} else {
+			doc.Set("scan", "FULL SCAN")
+			doc.Set("scan_reason", "CBO: full scan cheaper (high selectivity)")
+		}
 		doc.Set("index_matches", int64(len(candidateIDs)))
 	} else {
 		doc.Set("scan", "FULL SCAN")
+		doc.Set("scan_reason", "no usable index")
 	}
 
 	// WHERE selectivity (avec stats si disponibles)

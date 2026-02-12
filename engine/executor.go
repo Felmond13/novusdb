@@ -203,6 +203,10 @@ func (ex *Executor) execSelect(stmt *parser.SelectStatement) (*Result, error) {
 				candidateLocs = ex.resolveForceIndex(stmt.From, forceField, stmt.Where)
 			} else if !hasAgg {
 				candidateLocs = ex.resolveIndexLookup(stmt.From, stmt.Where, earlyLimit)
+				// CBO : vérifier si l'index est rentable vs full scan
+				if candidateLocs != nil && !ex.shouldUseIndex(stmt.From, stmt.Where, candidateLocs) {
+					candidateLocs = nil // full scan plus efficace
+				}
 			}
 		}
 		if candidateLocs != nil {
@@ -402,9 +406,12 @@ func (ex *Executor) execJoin(stmt *parser.SelectStatement) ([]*ResultDoc, error)
 			effectiveIsFirst = true // les docs gauche (ex-droite) sont des docs simples
 		}
 
-		// Choisir la stratégie
-		strategy, leftField, rightField := ex.chooseJoinStrategy(
-			join.Table, join.Condition, effectiveLeftName, effectiveRightName, stmt.Hints,
+		// Choisir la stratégie (CBO : coût basé sur les stats)
+		strategy, leftField, rightField := ex.chooseJoinStrategyCBO(
+			stmt.From, join.Table, join.Condition,
+			effectiveLeftName, effectiveRightName,
+			int64(len(effectiveLeftDocs)),
+			stmt.Hints,
 		)
 
 		var joinedDocs []*ResultDoc
@@ -500,12 +507,17 @@ func (ex *Executor) JoinStrategy(stmt *parser.SelectStatement) []string {
 	if stmt.FromAlias != "" {
 		leftName = stmt.FromAlias
 	}
+	leftStats := ex.collectStats(stmt.From)
+	leftRows := leftStats.RowCount
 	for _, join := range stmt.Joins {
 		rightName := join.Table
 		if join.Alias != "" {
 			rightName = join.Alias
 		}
-		strategy, _, _ := ex.chooseJoinStrategy(join.Table, join.Condition, leftName, rightName, stmt.Hints)
+		strategy, _, _ := ex.chooseJoinStrategyCBO(
+			stmt.From, join.Table, join.Condition,
+			leftName, rightName, leftRows, stmt.Hints,
+		)
 		strategies = append(strategies, strategy.String())
 		leftName = ""
 	}
