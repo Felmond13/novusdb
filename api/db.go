@@ -47,6 +47,9 @@ func Open(path string) (*DB, error) {
 	// Charger les stats ANALYZE persistées
 	executor.LoadStats()
 
+	// Charger les contraintes PK/FK/UNIQUE persistées
+	executor.LoadConstraints()
+
 	return db, nil
 }
 
@@ -70,6 +73,7 @@ func OpenReadOnly(path string) (*DB, error) {
 	}
 	db.openPersistentIndexes()
 	executor.LoadStats()
+	executor.LoadConstraints()
 	return db, nil
 }
 

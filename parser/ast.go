@@ -351,6 +351,34 @@ type AnalyzeStatement struct {
 
 func (s *AnalyzeStatement) statementNode() {}
 
+// AlterTableStatement représente ALTER TABLE table ADD ...
+type AlterTableStatement struct {
+	Table      string
+	Constraint *ConstraintDef
+}
+
+func (s *AlterTableStatement) statementNode() {}
+
+// OnDeleteAction décrit l'action FK en cas de suppression du parent.
+type OnDeleteAction int
+
+const (
+	OnDeleteRestrict OnDeleteAction = iota // défaut : empêcher la suppression
+	OnDeleteCascade                        // supprimer les enfants
+	OnDeleteSetNull                        // mettre les FK enfants à NULL
+	OnDeleteNoAction                       // identique à RESTRICT dans la plupart des cas
+)
+
+// ConstraintDef décrit une contrainte (PK, FK, UNIQUE).
+type ConstraintDef struct {
+	Name      string         // nom optionnel de la contrainte
+	Type      string         // "PRIMARY_KEY", "FOREIGN_KEY", "UNIQUE"
+	Columns   []string       // colonne(s) concernée(s)
+	RefTable  string         // FK : table référencée
+	RefColumn string         // FK : colonne référencée
+	OnDelete  OnDeleteAction // FK : action on delete
+}
+
 // ExplainStatement encapsule un statement pour afficher son plan d'exécution.
 type ExplainStatement struct {
 	Inner Statement

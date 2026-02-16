@@ -53,27 +53,39 @@ const (
 	TokenCreate
 	TokenIndex
 	TokenDrop
-	TokenIs       // IS (pour IS NULL / IS NOT NULL)
-	TokenLike     // LIKE
-	TokenDistinct // DISTINCT
-	TokenTable    // TABLE
-	TokenBetween  // BETWEEN
-	TokenExplain  // EXPLAIN
-	TokenIf       // IF
-	TokenExists   // EXISTS
-	TokenReplace  // REPLACE
-	TokenTruncate // TRUNCATE
-	TokenUnion    // UNION
-	TokenAll      // ALL
-	TokenCase     // CASE
-	TokenWhen     // WHEN
-	TokenThen     // THEN
-	TokenElse     // ELSE
-	TokenEnd      // END
-	TokenView     // VIEW
-	TokenSequence // SEQUENCE
-	TokenAnalyze  // ANALYZE
-	TokenHint     // /*+ ... */ (Oracle-style hint)
+	TokenIs         // IS (pour IS NULL / IS NOT NULL)
+	TokenLike       // LIKE
+	TokenDistinct   // DISTINCT
+	TokenTable      // TABLE
+	TokenBetween    // BETWEEN
+	TokenExplain    // EXPLAIN
+	TokenIf         // IF
+	TokenExists     // EXISTS
+	TokenReplace    // REPLACE
+	TokenTruncate   // TRUNCATE
+	TokenUnion      // UNION
+	TokenAll        // ALL
+	TokenCase       // CASE
+	TokenWhen       // WHEN
+	TokenThen       // THEN
+	TokenElse       // ELSE
+	TokenEnd        // END
+	TokenView       // VIEW
+	TokenSequence   // SEQUENCE
+	TokenAnalyze    // ANALYZE
+	TokenAlter      // ALTER
+	TokenAdd        // ADD
+	TokenPrimary    // PRIMARY
+	TokenKey        // KEY
+	TokenForeign    // FOREIGN
+	TokenReferences // REFERENCES
+	TokenCascade    // CASCADE
+	TokenRestrict   // RESTRICT
+	TokenConstraint // CONSTRAINT
+	TokenUnique     // UNIQUE
+	TokenAction     // ACTION
+	TokenNo         // NO
+	TokenHint       // /*+ ... */ (Oracle-style hint)
 
 	// Opérateurs et ponctuation
 	TokenStar   // *
@@ -164,6 +176,18 @@ var keywords = map[string]TokenType{
 	"view":     TokenView,
 	"sequence": TokenSequence,
 	"analyze":  TokenAnalyze,
+	"alter":    TokenAlter,
+	"add":      TokenAdd,
+	"primary":  TokenPrimary,
+	// "key" not a keyword — too common as field name; handled contextually in ALTER TABLE
+	"foreign":    TokenForeign,
+	"references": TokenReferences,
+	"cascade":    TokenCascade,
+	"restrict":   TokenRestrict,
+	"constraint": TokenConstraint,
+	"unique":     TokenUnique,
+	"action":     TokenAction,
+	"no":         TokenNo,
 }
 
 // LookupIdent retourne le TokenType d'un identifiant (mot-clé ou ident).

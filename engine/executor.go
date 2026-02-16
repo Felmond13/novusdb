@@ -38,11 +38,12 @@ type Sequence struct {
 
 // Executor orchestre l'exécution des requêtes sur le stockage.
 type Executor struct {
-	pager      *storage.Pager
-	lockMgr    *concurrency.LockManager
-	indexMgr   *index.Manager
-	seqs       map[string]*Sequence
-	statsCache map[string]*TableStats // stats ANALYZE en cache
+	pager       *storage.Pager
+	lockMgr     *concurrency.LockManager
+	indexMgr    *index.Manager
+	seqs        map[string]*Sequence
+	statsCache  map[string]*TableStats   // stats ANALYZE en cache
+	constraints map[string][]*Constraint // contraintes PK/FK/UNIQUE par table
 }
 
 // NewExecutor crée un nouvel exécuteur.
@@ -93,6 +94,8 @@ func (ex *Executor) Execute(stmt parser.Statement) (*Result, error) {
 		return ex.execDropSequence(s)
 	case *parser.AnalyzeStatement:
 		return ex.execAnalyze(s)
+	case *parser.AlterTableStatement:
+		return ex.execAlterTable(s)
 	default:
 		return nil, fmt.Errorf("executor: unsupported statement type %T", stmt)
 	}
@@ -795,6 +798,14 @@ func (ex *Executor) execInsert(stmt *parser.InsertStatement) (*Result, error) {
 			return nil, err
 		}
 
+		// Auto-ID : ajouter _id si absent
+		ensureAutoID(doc, recordID)
+
+		// Vérifier les contraintes PK/UNIQUE/FK
+		if err := ex.checkInsertConstraints(stmt.Table, doc); err != nil {
+			return nil, err
+		}
+
 		encoded, err := doc.Encode()
 		if err != nil {
 			return nil, err
@@ -1150,6 +1161,12 @@ func (ex *Executor) execDelete(stmt *parser.DeleteStatement) (*Result, error) {
 	for _, t := range targets {
 		if err := ex.lockMgr.AcquireRecord(stmt.Table, t.recordID); err != nil {
 			return nil, fmt.Errorf("delete: %w", err)
+		}
+
+		// Vérifier les contraintes FK (CASCADE / RESTRICT / SET NULL)
+		if err := ex.checkDeleteConstraints(stmt.Table, t.doc); err != nil {
+			ex.lockMgr.ReleaseRecord(stmt.Table, t.recordID)
+			return nil, err
 		}
 
 		if err := ex.pager.MarkDeletedAtomic(t.pageID, t.slotOffset); err != nil {

@@ -154,6 +154,8 @@ func (p *Parser) Parse() (Statement, error) {
 		return p.parseTruncate()
 	case TokenAnalyze:
 		return p.parseAnalyze()
+	case TokenAlter:
+		return p.parseAlterTable()
 	default:
 		return nil, fmt.Errorf("parser: unexpected token %q at pos %d", p.current.Literal, p.current.Pos)
 	}
@@ -1544,6 +1546,170 @@ func (p *Parser) parseExprList() ([]Expr, error) {
 		p.advance()
 	}
 	return exprs, nil
+}
+
+// isKeyword checks if the current token matches a contextual keyword by literal (case-insensitive).
+// This handles words like "key" that are not in the keywords map to avoid conflicts with field names.
+func (p *Parser) isKeyword(word string) bool {
+	return (p.current.Type == TokenIdent || p.current.Type == TokenKey) &&
+		strings.EqualFold(p.current.Literal, word)
+}
+
+// ---------- ALTER TABLE ----------
+
+// parseAlterTable parse ALTER TABLE table ADD [CONSTRAINT name] PRIMARY KEY(col) |
+//
+//	FOREIGN KEY(col) REFERENCES ref(refcol) [ON DELETE CASCADE|RESTRICT|SET NULL|NO ACTION] |
+//	UNIQUE(col[, col2, ...])
+func (p *Parser) parseAlterTable() (*AlterTableStatement, error) {
+	p.advance() // skip ALTER
+	if p.current.Type != TokenTable {
+		return nil, fmt.Errorf("parser: expected TABLE after ALTER at pos %d", p.current.Pos)
+	}
+	p.advance() // skip TABLE
+	if p.current.Type != TokenIdent {
+		return nil, fmt.Errorf("parser: expected table name after ALTER TABLE at pos %d", p.current.Pos)
+	}
+	tableName := p.current.Literal
+	p.advance()
+
+	if p.current.Type != TokenAdd {
+		return nil, fmt.Errorf("parser: expected ADD after ALTER TABLE %s at pos %d", tableName, p.current.Pos)
+	}
+	p.advance() // skip ADD
+
+	stmt := &AlterTableStatement{Table: tableName}
+	cdef := &ConstraintDef{}
+
+	// Nom de contrainte optionnel : CONSTRAINT name
+	if p.current.Type == TokenConstraint {
+		p.advance()
+		if p.current.Type != TokenIdent {
+			return nil, fmt.Errorf("parser: expected constraint name at pos %d", p.current.Pos)
+		}
+		cdef.Name = p.current.Literal
+		p.advance()
+	}
+
+	switch p.current.Type {
+	case TokenPrimary:
+		// PRIMARY KEY (col [, col2, ...])
+		p.advance() // skip PRIMARY
+		if !p.isKeyword("key") {
+			return nil, fmt.Errorf("parser: expected KEY after PRIMARY at pos %d", p.current.Pos)
+		}
+		p.advance() // skip KEY
+		cols, err := p.parseColumnList()
+		if err != nil {
+			return nil, err
+		}
+		cdef.Type = "PRIMARY_KEY"
+		cdef.Columns = cols
+
+	case TokenForeign:
+		// FOREIGN KEY (col) REFERENCES ref_table(ref_col) [ON DELETE ...]
+		p.advance() // skip FOREIGN
+		if !p.isKeyword("key") {
+			return nil, fmt.Errorf("parser: expected KEY after FOREIGN at pos %d", p.current.Pos)
+		}
+		p.advance() // skip KEY
+		cols, err := p.parseColumnList()
+		if err != nil {
+			return nil, err
+		}
+		if p.current.Type != TokenReferences {
+			return nil, fmt.Errorf("parser: expected REFERENCES at pos %d", p.current.Pos)
+		}
+		p.advance() // skip REFERENCES
+		if p.current.Type != TokenIdent {
+			return nil, fmt.Errorf("parser: expected reference table name at pos %d", p.current.Pos)
+		}
+		refTable := p.current.Literal
+		p.advance()
+		refCols, err := p.parseColumnList()
+		if err != nil {
+			return nil, err
+		}
+		cdef.Type = "FOREIGN_KEY"
+		cdef.Columns = cols
+		cdef.RefTable = refTable
+		if len(refCols) > 0 {
+			cdef.RefColumn = refCols[0]
+		}
+		cdef.OnDelete = OnDeleteRestrict // défaut
+		// ON DELETE action optionnel
+		if p.current.Type == TokenOn {
+			p.advance() // skip ON
+			if p.current.Type != TokenDelete {
+				return nil, fmt.Errorf("parser: expected DELETE after ON at pos %d", p.current.Pos)
+			}
+			p.advance() // skip DELETE
+			switch p.current.Type {
+			case TokenCascade:
+				cdef.OnDelete = OnDeleteCascade
+				p.advance()
+			case TokenRestrict:
+				cdef.OnDelete = OnDeleteRestrict
+				p.advance()
+			case TokenNo:
+				p.advance() // skip NO
+				if p.current.Type == TokenAction {
+					p.advance()
+				}
+				cdef.OnDelete = OnDeleteNoAction
+			default:
+				// SET NULL
+				if p.current.Type == TokenSet {
+					p.advance()
+					if p.current.Type == TokenNull {
+						p.advance()
+					}
+					cdef.OnDelete = OnDeleteSetNull
+				} else {
+					return nil, fmt.Errorf("parser: unexpected ON DELETE action %q at pos %d", p.current.Literal, p.current.Pos)
+				}
+			}
+		}
+
+	case TokenUnique:
+		// UNIQUE (col [, col2, ...])
+		p.advance() // skip UNIQUE
+		cols, err := p.parseColumnList()
+		if err != nil {
+			return nil, err
+		}
+		cdef.Type = "UNIQUE"
+		cdef.Columns = cols
+
+	default:
+		return nil, fmt.Errorf("parser: expected PRIMARY, FOREIGN, or UNIQUE after ADD at pos %d", p.current.Pos)
+	}
+
+	stmt.Constraint = cdef
+	return stmt, nil
+}
+
+// parseColumnList parse (col1, col2, ...) et retourne les noms.
+func (p *Parser) parseColumnList() ([]string, error) {
+	if p.current.Type != TokenLParen {
+		return nil, fmt.Errorf("parser: expected '(' at pos %d", p.current.Pos)
+	}
+	p.advance() // skip (
+	var cols []string
+	for p.current.Type != TokenRParen && p.current.Type != TokenEOF {
+		if p.current.Type != TokenIdent {
+			return nil, fmt.Errorf("parser: expected column name at pos %d, got %q", p.current.Pos, p.current.Literal)
+		}
+		cols = append(cols, p.current.Literal)
+		p.advance()
+		if p.current.Type == TokenComma {
+			p.advance()
+		}
+	}
+	if p.current.Type == TokenRParen {
+		p.advance()
+	}
+	return cols, nil
 }
 
 // parseExprListUntilRParen parse des expressions jusqu'à ')'.
